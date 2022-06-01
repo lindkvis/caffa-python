@@ -38,8 +38,10 @@ class Object(object):
 
         if channel is not None:
             self._channel = channel
-            self._field_stub = FieldService_pb2_grpc.FieldAccessStub(self._channel)
-            self._object_stub = ObjectService_pb2_grpc.ObjectAccessStub(self._channel)
+            self._field_stub = FieldService_pb2_grpc.FieldAccessStub(
+                self._channel)
+            self._object_stub = ObjectService_pb2_grpc.ObjectAccessStub(
+                self._channel)
 
     # Overload so that we can ask for object.name instead of object.get("name")
     def __getattr__(self, name):
@@ -56,8 +58,7 @@ class Object(object):
             )
             if field:
                 return self.set(name, value)
-            if not hasattr(self, name):
-                Object.log.error("Field %s does not exist in object", name)
+            Object.log.error("Field %s does not exist in object", name)
         super().__setattr__(name, value)
 
     def keyword(self):
@@ -77,12 +78,33 @@ class Object(object):
         while index < len(array):
             chunk = FieldService_pb2.GenericArray()
             if index == -1:
-                chunk.CopyFrom(array_request)
+                chunk.request.CopyFrom(array_request)
                 index += 1
             else:
-                actual_chunk_size = min(len(array) - index + 1, self._chunk_size)
-                chunk.CopyFrom(
-                    FieldService_pb2.IntArray(array[index : index + actual_chunk_size])
+                actual_chunk_size = min(
+                    len(array) - index + 1, self._chunk_size)
+                chunk.ints.CopyFrom(
+                    FieldService_pb2.IntArray(
+                        data=array[index: index + actual_chunk_size])
+                )
+                index += actual_chunk_size
+            yield chunk
+        chunk = FieldService_pb2.GenericArray()
+        yield chunk
+
+    def __generate_float_input_chunks(self, array, array_request):
+        index = -1
+        while index < len(array):
+            chunk = FieldService_pb2.GenericArray()
+            if index == -1:
+                chunk.request.CopyFrom(array_request)
+                index += 1
+            else:
+                actual_chunk_size = min(
+                    len(array) - index + 1, self._chunk_size)
+                chunk.floats.CopyFrom(
+                    FieldService_pb2.FloatArray(
+                        data=array[index: index + actual_chunk_size])
                 )
                 index += actual_chunk_size
             yield chunk
@@ -198,9 +220,9 @@ class Object(object):
                 rpc_data_array = getattr(rpc_result, rpc_oneof)
                 for rpc_data_item in rpc_data_array.data:
                     data_list.append(rpc_data_item)
-        else:
-            field = self.field(field_keyword)
-            for value in field["value"]:
+        elif self._json_object and field_keyword in self._json_object:
+            list_field = self._json_object[field_keyword]
+            for value in list_field["value"]:
                 data_list.append(value)
         return data_list
 
@@ -217,11 +239,49 @@ class Object(object):
             array_request = FieldService_pb2.ArrayRequest(
                 field=field_request, value_count=len(values)
             )
-            rpc_iterator = self.__generate_int_input_chunks(values, array_request)
+            rpc_iterator = self.__generate_int_input_chunks(
+                values, array_request)
             self._field_stub.SetArrayValue(rpc_iterator)
-        else:
-            field = self.field(field_keyword)
-            field["value"] = values
+        elif self._json_object and field_keyword in self._json_object:
+            self._json_object[field_keyword]["value"] = values
+
+    def set_float_list(self, field_keyword, values):
+        if self._channel is not None:
+            session = AppInfo_pb2.SessionMessage(uuid=self._session_uuid)
+
+            field_request = FieldService_pb2.FieldRequest(
+                class_keyword=self.keyword(),
+                uuid=self.uuid(),
+                keyword=field_keyword,
+                session=session,
+            )
+            array_request = FieldService_pb2.ArrayRequest(
+                field=field_request, value_count=len(values)
+            )
+            rpc_iterator = self.__generate_float_input_chunks(
+                values, array_request)
+            self._field_stub.SetArrayValue(rpc_iterator)
+        elif self._json_object and field_keyword in self._json_object:
+            self._json_object[field_keyword]["value"] = values
+
+    def set_double_list(self, field_keyword, values):
+        if self._channel is not None:
+            session = AppInfo_pb2.SessionMessage(uuid=self._session_uuid)
+
+            field_request = FieldService_pb2.FieldRequest(
+                class_keyword=self.keyword(),
+                uuid=self.uuid(),
+                keyword=field_keyword,
+                session=session,
+            )
+            array_request = FieldService_pb2.ArrayRequest(
+                field=field_request, value_count=len(values)
+            )
+            rpc_iterator = self.__generate_double_input_chunks(
+                values, array_request)
+            self._field_stub.SetArrayValue(rpc_iterator)
+        elif self._json_object and field_keyword in self._json_object:
+            self._json_object[field_keyword]["value"] = values
 
     def get(self, field_keyword):
         data_type = self.type(field_keyword)
@@ -249,7 +309,11 @@ class Object(object):
             data_type,
         )
         if data_type == "int32[]":
-            self.set_int_list(field_keyword, value)
+            self.set_int_list(field_keyword, list(value))
+        elif data_type == "float[]":
+            self.set_float_list(field_keyword, list(value))
+        elif data_type == "double[]":
+            self.set_double_list(field_keyword, list(value))
         else:
             if self._channel is not None:
                 session = AppInfo_pb2.SessionMessage(uuid=self._session_uuid)

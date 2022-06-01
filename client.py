@@ -42,7 +42,8 @@ class Client:
         self.port_number = port
         self.log = logging.getLogger("grpc-logger")
 
-        self.check_version()
+        if not self.check_version():
+            raise RuntimeError("Server version is too old")
 
         msg = AppInfo_pb2.NullMessage()
         self.session_uuid = self.app_info_stub.CreateSession(msg).uuid
@@ -54,7 +55,7 @@ class Client:
         msg = AppInfo_pb2.NullMessage()
         return self.app_info_stub.GetAppInfo(msg)
 
-    def destroy_session(self):
+    def cleanup(self):
         msg = AppInfo_pb2.SessionMessage(uuid=self.session_uuid)
         self.app_info_stub.DestroySession(msg)
 
@@ -100,7 +101,7 @@ class Client:
                 REQUIRED_CAFFA_VERSION[1],
                 REQUIRED_CAFFA_VERSION[2],
             )
-            exit(1)
+            return False
         if (
             app_info.major_version,
             app_info.minor_version,
@@ -115,3 +116,4 @@ class Client:
                 REQUIRED_CAFFA_VERSION[1],
                 REQUIRED_CAFFA_VERSION[2],
             )
+        return True

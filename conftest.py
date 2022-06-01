@@ -1,14 +1,6 @@
-from subprocess import check_call
-import sys
-import setuptools
-import pathlib
 import os
-
-import grpc
-from grpc_tools import protoc
-
-name = "caffa"
-
+import pytest
+import sys
 
 current_dir = os.path.dirname(__file__)
 generated_dir = "generated/"
@@ -26,6 +18,3 @@ def generate_proto_code():
 
 
 generate_proto_code()
-
-from .client import Client
-from .object import Object
