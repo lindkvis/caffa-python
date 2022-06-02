@@ -1,4 +1,5 @@
-from subprocess import check_call
+import platform
+import subprocess
 import sys
 import setuptools
 import pathlib
@@ -17,13 +18,15 @@ proto_dir = "protos/"
 
 sys.path.insert(0, os.path.join(caffa_dir, generated_dir))
 
-
 def generate_proto_code():
     os.chdir(caffa_dir)
     if not os.path.exists(generated_dir):
         print("Making directory " + generated_dir)
         os.mkdir(generated_dir)
-    os.system("./generate_grpc_classes.sh")
+    if platform.system() == "Windows":
+        os.system("generate_grpc_classes.bat")
+    else:
+        os.system("./generate_grpc_classes.sh")
     os.chdir(current_dir)
 
 
