@@ -29,11 +29,14 @@ import ObjectService_pb2_grpc
 from . import object
 
 # Update the (x, y, z) tuple to match minimum required version (0, 6, 4) means minimum 0.6.4
+# By default we try to match the caffa-version
+# However the application using caffa should set its own version which can be checked
+# against by providing the script-version parameter
 REQUIRED_CAFFA_VERSION = (0, 13, 0)
 
 
 class Client:
-    def __init__(self, hostname, port=50000):
+    def __init__(self, hostname, port=50000, script_version=REQUIRED_CAFFA_VERSION):
         self.channel = grpc.insecure_channel(hostname + ":" + str(port))
         self.app_info_stub = AppInfo_pb2_grpc.AppStub(self.channel)
         self.object_stub = ObjectService_pb2_grpc.ObjectAccessStub(
@@ -42,7 +45,7 @@ class Client:
         self.port_number = port
         self.log = logging.getLogger("grpc-logger")
 
-        if not self.check_version():
+        if not self.check_version(script_version):
             raise RuntimeError("Server version is too old")
 
         msg = AppInfo_pb2.NullMessage()
@@ -74,7 +77,7 @@ class Client:
             return object.Object(rpc_document.json, self.session_uuid, self.channel)
         return None
 
-    def check_version(self):
+    def check_version(self, script_version):
         app_info = self.app_info()
         self.log.info(
             "Found Caffa '"
@@ -91,29 +94,29 @@ class Client:
             app_info.major_version,
             app_info.minor_version,
             app_info.patch_version,
-        ) < REQUIRED_CAFFA_VERSION:
+        ) < script_version:
             self.log.error(
                 "Caffa Version %d.%d.%d is too old. Script requires minimum %d.%d.%d",
                 app_info.major_version,
                 app_info.minor_version,
                 app_info.patch_version,
-                REQUIRED_CAFFA_VERSION[0],
-                REQUIRED_CAFFA_VERSION[1],
-                REQUIRED_CAFFA_VERSION[2],
+                script_version[0],
+                script_version[1],
+                script_version[2],
             )
             return False
         if (
             app_info.major_version,
             app_info.minor_version,
             app_info.patch_version,
-        ) > REQUIRED_CAFFA_VERSION:
+        ) > script_version:
             self.log.warning(
                 "Caffa Version %d.%d.%d is newer than the script version %d.%d.%d . This may or may not work!",
                 app_info.major_version,
                 app_info.minor_version,
                 app_info.patch_version,
-                REQUIRED_CAFFA_VERSION[0],
-                REQUIRED_CAFFA_VERSION[1],
-                REQUIRED_CAFFA_VERSION[2],
+                script_version[0],
+                script_version[1],
+                script_version[2],
             )
         return True
