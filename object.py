@@ -62,10 +62,10 @@ class Object(object):
         super().__setattr__(name, value)
 
     def keyword(self):
-        return self._json_object["Class"]
+        return self._json_object["class"]
 
     def uuid(self):
-        return self._json_object["UUID"]
+        return self._json_object["uuid"]
 
     def type(self, field_keyword):
         if self._json_object and field_keyword in self._json_object:
