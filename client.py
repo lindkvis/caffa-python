@@ -19,6 +19,8 @@
 
 import grpc
 import logging
+import time
+import threading
 
 import AppInfo_pb2
 import AppInfo_pb2_grpc
@@ -44,6 +46,7 @@ class Client:
         self.hostname = hostname
         self.port_number = port
         self.log = logging.getLogger("grpc-logger")
+        self.mutex = threading.Lock()
 
         if not self.check_version(script_version):
             raise RuntimeError("Server version is too old")
@@ -54,17 +57,36 @@ class Client:
             raise RuntimeError("Failed to create session")
         self.log.debug("Session uuid: %s", self.session_uuid)
 
+        threading.Thread(target=self.send_keepalives)
+
     def app_info(self):
         msg = AppInfo_pb2.NullMessage()
         return self.app_info_stub.GetAppInfo(msg)
 
     def cleanup(self):
-        msg = AppInfo_pb2.SessionMessage(uuid=self.session_uuid)
-        self.app_info_stub.DestroySession(msg)
+        try:
+            self.mutex.acquire()
+            msg = AppInfo_pb2.SessionMessage(uuid=self.session_uuid)
+            self.app_info_stub.DestroySession(msg)
+            self.app_info_stub = None
+        finally:
+            self.mutex.release()
 
     def send_keepalive(self):
         msg = AppInfo_pb2.SessionMessage(uuid=self.session_uuid)
         self.app_info_stub.KeepSessionAlive(msg)
+
+    def send_keepalives(self):
+        while True:
+            time.sleep(0.5)
+            try:
+                self.mutex.acquire()
+                if self.app_info_stub is not None:
+                    self.send_keepalive()
+                else:
+                    break
+            finally:
+                self.mutex.release()
 
     def document(self, document_id=""):
         session = AppInfo_pb2.SessionMessage(uuid=self.session_uuid)
