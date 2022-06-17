@@ -28,7 +28,7 @@ import ObjectService_pb2_grpc
 
 
 class Object(object):
-    log = logging.getLogger("caffa-object")
+    _log = logging.getLogger("caffa-object")
     _chunk_size = 4096
 
     def __init__(self, json_object, session_uuid="", channel=None):
@@ -58,7 +58,7 @@ class Object(object):
             )
             if field:
                 return self.set(name, value)
-            Object.log.error("Field %s does not exist in object", name)
+            Object._log.error("Field %s does not exist in object", name)
         super().__setattr__(name, value)
 
     def keyword(self):
@@ -200,7 +200,11 @@ class Object(object):
             result = self._field_stub.GetValue(field_request).value
             return json.loads(result) if result is not None else None
         elif self._json_object and field_keyword in self._json_object:
-            return self._json_object[field_keyword]
+            if "value" in self._json_object[field_keyword]:
+                result = self._json_object[field_keyword]["value"]
+            else:
+                result = self._json_object[field_keyword]
+            return result
         return None
 
     def get_list(self, field_keyword):
@@ -285,7 +289,7 @@ class Object(object):
 
     def get(self, field_keyword):
         data_type = self.type(field_keyword)
-        Object.log.debug(
+        Object._log.debug(
             "Getting data for keyword=%s and data type=%s", field_keyword, data_type
         )
         if data_type is not None:
@@ -302,7 +306,7 @@ class Object(object):
 
     def set(self, field_keyword, value, address_offset=0):
         data_type = self.type(field_keyword)
-        Object.log.debug(
+        Object._log.debug(
             "Setting value=%s for keyword=%s and data type=%s",
             str(value),
             field_keyword,
