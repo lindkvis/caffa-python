@@ -11,7 +11,6 @@ from grpc_tools import protoc
 name = "caffa"
 
 current_dir = os.path.abspath(os.curdir)
-print (current_dir)
 caffa_dir = os.path.dirname(__file__)
 generated_dir = "generated/"
 proto_dir = "protos/"
