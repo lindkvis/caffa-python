@@ -13,7 +13,6 @@ name = "caffa"
 current_dir = os.path.abspath(os.curdir)
 caffa_dir = os.path.dirname(__file__)
 generated_dir = "generated/"
-proto_dir = "protos/"
 
 sys.path.insert(0, os.path.join(caffa_dir, generated_dir))
 
