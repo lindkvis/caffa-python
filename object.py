@@ -343,7 +343,7 @@ class Object(object):
     def methods(self):
         session = AppInfo_pb2.SessionMessage(uuid=self._session_uuid)
         request = ObjectService_pb2.ListMethodsRequest(
-            self=self.rpc_object(), session=session
+            self_object=self.rpc_object(), session=session
         )
 
         rpc_object_list = self._object_stub.ListMethods(request).objects
