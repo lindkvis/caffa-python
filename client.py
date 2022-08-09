@@ -22,8 +22,8 @@ import logging
 import time
 import threading
 
-import AppInfo_pb2
-import AppInfo_pb2_grpc
+import App_pb2
+import App_pb2_grpc
 
 import ObjectService_pb2
 import ObjectService_pb2_grpc
@@ -40,7 +40,7 @@ REQUIRED_CAFFA_VERSION = (0, 13, 0)
 class Client:
     def __init__(self, hostname, port=50000, script_version=REQUIRED_CAFFA_VERSION):
         self.channel = grpc.insecure_channel(hostname + ":" + str(port))
-        self.app_info_stub = AppInfo_pb2_grpc.AppStub(self.channel)
+        self.app_info_stub = App_pb2_grpc.AppStub(self.channel)
         self.object_stub = ObjectService_pb2_grpc.ObjectAccessStub(
             self.channel)
         self.hostname = hostname
@@ -51,7 +51,7 @@ class Client:
         if not self.check_version(script_version):
             raise RuntimeError("Server version is too old")
 
-        msg = AppInfo_pb2.NullMessage()
+        msg = App_pb2.NullMessage()
         self.session_uuid = self.app_info_stub.CreateSession(msg).uuid
         if not self.session_uuid:
             raise RuntimeError("Failed to create session")
@@ -60,20 +60,20 @@ class Client:
         threading.Thread(target=self.send_keepalives)
 
     def app_info(self):
-        msg = AppInfo_pb2.NullMessage()
+        msg = App_pb2.NullMessage()
         return self.app_info_stub.GetAppInfo(msg)
 
     def cleanup(self):
         try:
             self.mutex.acquire()
-            msg = AppInfo_pb2.SessionMessage(uuid=self.session_uuid)
+            msg = App_pb2.SessionMessage(uuid=self.session_uuid)
             self.app_info_stub.DestroySession(msg)
             self.app_info_stub = None
         finally:
             self.mutex.release()
 
     def send_keepalive(self):
-        msg = AppInfo_pb2.SessionMessage(uuid=self.session_uuid)
+        msg = App_pb2.SessionMessage(uuid=self.session_uuid)
         self.app_info_stub.KeepSessionAlive(msg)
 
     def send_keepalives(self):
@@ -89,7 +89,7 @@ class Client:
                 self.mutex.release()
 
     def document(self, document_id=""):
-        session = AppInfo_pb2.SessionMessage(uuid=self.session_uuid)
+        session = App_pb2.SessionMessage(uuid=self.session_uuid)
 
         doc_request = ObjectService_pb2.DocumentRequest(
             document_id=document_id, session=session

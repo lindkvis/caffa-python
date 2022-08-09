@@ -20,7 +20,7 @@ import grpc
 import json
 import logging
 
-import AppInfo_pb2
+import App_pb2
 import FieldService_pb2
 import FieldService_pb2_grpc
 import ObjectService_pb2
@@ -127,7 +127,7 @@ class Object(object):
 
     def get_object(self, field_keyword):
         if self._channel is not None:
-            session = AppInfo_pb2.SessionMessage(uuid=self._session_uuid)
+            session = App_pb2.SessionMessage(uuid=self._session_uuid)
             field_request = FieldService_pb2.FieldRequest(
                 class_keyword=self.keyword(),
                 uuid=self.uuid(),
@@ -152,7 +152,7 @@ class Object(object):
 
     def get_objects(self, field_keyword):
         if self._channel is not None:
-            session = AppInfo_pb2.SessionMessage(uuid=self._session_uuid)
+            session = App_pb2.SessionMessage(uuid=self._session_uuid)
             field_request = FieldService_pb2.FieldRequest(
                 class_keyword=self.keyword(),
                 uuid=self.uuid(),
@@ -190,7 +190,7 @@ class Object(object):
     def get_scalar(self, field_keyword):
         result = None
         if self._channel is not None:
-            session = AppInfo_pb2.SessionMessage(uuid=self._session_uuid)
+            session = App_pb2.SessionMessage(uuid=self._session_uuid)
             field_request = FieldService_pb2.FieldRequest(
                 class_keyword=self.keyword(),
                 uuid=self.uuid(),
@@ -210,7 +210,7 @@ class Object(object):
     def get_list(self, field_keyword):
         data_list = []
         if self._channel is not None:
-            session = AppInfo_pb2.SessionMessage(uuid=self._session_uuid)
+            session = App_pb2.SessionMessage(uuid=self._session_uuid)
 
             field_request = FieldService_pb2.FieldRequest(
                 class_keyword=self.keyword(),
@@ -232,7 +232,7 @@ class Object(object):
 
     def set_int_list(self, field_keyword, values):
         if self._channel is not None:
-            session = AppInfo_pb2.SessionMessage(uuid=self._session_uuid)
+            session = App_pb2.SessionMessage(uuid=self._session_uuid)
 
             field_request = FieldService_pb2.FieldRequest(
                 class_keyword=self.keyword(),
@@ -251,7 +251,7 @@ class Object(object):
 
     def set_float_list(self, field_keyword, values):
         if self._channel is not None:
-            session = AppInfo_pb2.SessionMessage(uuid=self._session_uuid)
+            session = App_pb2.SessionMessage(uuid=self._session_uuid)
 
             field_request = FieldService_pb2.FieldRequest(
                 class_keyword=self.keyword(),
@@ -270,7 +270,7 @@ class Object(object):
 
     def set_double_list(self, field_keyword, values):
         if self._channel is not None:
-            session = AppInfo_pb2.SessionMessage(uuid=self._session_uuid)
+            session = App_pb2.SessionMessage(uuid=self._session_uuid)
 
             field_request = FieldService_pb2.FieldRequest(
                 class_keyword=self.keyword(),
@@ -320,7 +320,7 @@ class Object(object):
             self.set_double_list(field_keyword, list(value))
         else:
             if self._channel is not None:
-                session = AppInfo_pb2.SessionMessage(uuid=self._session_uuid)
+                session = App_pb2.SessionMessage(uuid=self._session_uuid)
 
                 field_request = FieldService_pb2.FieldRequest(
                     class_keyword=self.keyword(),
@@ -341,7 +341,7 @@ class Object(object):
             self.set(key, value)
 
     def methods(self):
-        session = AppInfo_pb2.SessionMessage(uuid=self._session_uuid)
+        session = App_pb2.SessionMessage(uuid=self._session_uuid)
         request = ObjectService_pb2.ListMethodsRequest(
             self_object=self.rpc_object(), session=session
         )
@@ -360,7 +360,7 @@ class Object(object):
         return None
 
     def execute(self, object_method):
-        session = AppInfo_pb2.SessionMessage(uuid=self._session_uuid)
+        session = App_pb2.SessionMessage(uuid=self._session_uuid)
 
         method_request = ObjectService_pb2.MethodRequest(
             self_object=self.rpc_object(),
