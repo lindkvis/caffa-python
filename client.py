@@ -56,8 +56,9 @@ class Client:
         if not self.session_uuid:
             raise RuntimeError("Failed to create session")
         self.log.debug("Session uuid: %s", self.session_uuid)
-
-        threading.Thread(target=self.send_keepalives)
+        self.keep_alive = True
+        self.keepalive_thread = threading.Thread(target=self.send_keepalives)
+        self.keepalive_thread.start()
 
     def app_info(self):
         msg = App_pb2.NullMessage()
@@ -66,6 +67,7 @@ class Client:
     def cleanup(self):
         try:
             self.mutex.acquire()
+            self.keep_alive = False
             msg = App_pb2.SessionMessage(uuid=self.session_uuid)
             self.app_info_stub.DestroySession(msg)
             self.app_info_stub = None
@@ -81,7 +83,9 @@ class Client:
             time.sleep(0.5)
             try:
                 self.mutex.acquire()
-                if self.app_info_stub is not None:
+                if not self.keep_alive:
+                    break;
+                elif self.app_info_stub is not None:
                     self.send_keepalive()
                 else:
                     break
