@@ -368,7 +368,10 @@ class Object(object):
             params=object_method.rpc_object(),
             session=session,
         )
-        result = self._object_stub.ExecuteMethod(method_request)
+        try:
+            result = self._object_stub.ExecuteMethod(method_request)
+        except grpc.RpcError as e:
+            raise RuntimeError(e.details())
         return Object(result.json) if result.json else None
 
     def dump(self):
