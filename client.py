@@ -28,6 +28,7 @@ import App_pb2_grpc
 import ObjectService_pb2
 import ObjectService_pb2_grpc
 
+from enum import Enum
 from . import object
 
 # Update the (x, y, z) tuple to match minimum required version (0, 6, 4) means minimum 0.6.4
@@ -36,9 +37,13 @@ from . import object
 # against by providing the script-version parameter
 REQUIRED_CAFFA_VERSION = (0, 14, 0)
 
+class SessionType(Enum):
+    REGULAR   = 0
+    OBSERVING = 1
+
 
 class Client:
-    def __init__(self, hostname, port=50000, script_version=REQUIRED_CAFFA_VERSION, session_type=App_pb2.SessionType.REGULAR):
+    def __init__(self, hostname, port=50000, script_version=REQUIRED_CAFFA_VERSION, session_type=SessionType.REGULAR):
         self.channel = grpc.insecure_channel(hostname + ":" + str(port))
         self.app_info_stub = App_pb2_grpc.AppStub(self.channel)
         self.object_stub = ObjectService_pb2_grpc.ObjectAccessStub(
@@ -48,10 +53,11 @@ class Client:
         self.log = logging.getLogger("grpc-logger")
         self.mutex = threading.Lock()
 
-        if not self.check_version(script_version):
-            raise RuntimeError("Server version is too old")
+        self.check_version(script_version)
 
-        msg = App_pb2.SessionParameters(type=session_type)
+        proto_session_type = App_pb2.SessionType.REGULAR if session_type == SessionType.REGULAR else App_pb2.SessionType.OBSERVING
+
+        msg = App_pb2.SessionParameters(type=proto_session_type)
         self.session_uuid = self.app_info_stub.CreateSession(msg).uuid
         if not self.session_uuid:
             raise RuntimeError("Failed to create session")
@@ -121,14 +127,14 @@ class Client:
             app_info.minor_version,
             app_info.patch_version,
         ) < script_version:
-            self.log.error(
-                "Caffa Version %d.%d.%d is too old. Script requires minimum %d.%d.%d",
+            raise RuntimeError(
+                "Caffa Version {}.{}.{} is too old. Script requires minimum {}.{}.{}".format(
                 app_info.major_version,
                 app_info.minor_version,
                 app_info.patch_version,
                 script_version[0],
                 script_version[1],
-                script_version[2],
+                script_version[2])
             )
             return False
         if (

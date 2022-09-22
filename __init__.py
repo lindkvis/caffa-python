@@ -30,5 +30,5 @@ def generate_proto_code():
 
 generate_proto_code()
 
-from .client import Client
+from .client import Client, SessionType
 from .object import Object
