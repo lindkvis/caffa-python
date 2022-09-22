@@ -34,11 +34,11 @@ from . import object
 # By default we try to match the caffa-version
 # However the application using caffa should set its own version which can be checked
 # against by providing the script-version parameter
-REQUIRED_CAFFA_VERSION = (0, 13, 0)
+REQUIRED_CAFFA_VERSION = (0, 14, 0)
 
 
 class Client:
-    def __init__(self, hostname, port=50000, script_version=REQUIRED_CAFFA_VERSION):
+    def __init__(self, hostname, port=50000, script_version=REQUIRED_CAFFA_VERSION, session_type=App_pb2.SessionType.REGULAR):
         self.channel = grpc.insecure_channel(hostname + ":" + str(port))
         self.app_info_stub = App_pb2_grpc.AppStub(self.channel)
         self.object_stub = ObjectService_pb2_grpc.ObjectAccessStub(
@@ -51,7 +51,7 @@ class Client:
         if not self.check_version(script_version):
             raise RuntimeError("Server version is too old")
 
-        msg = App_pb2.NullMessage()
+        msg = App_pb2.SessionParameters(type=session_type)
         self.session_uuid = self.app_info_stub.CreateSession(msg).uuid
         if not self.session_uuid:
             raise RuntimeError("Failed to create session")
