@@ -35,7 +35,8 @@ from . import object
 # By default we try to match the caffa-version
 # However the application using caffa should set its own version which can be checked
 # against by providing the script-version parameter
-REQUIRED_CAFFA_VERSION = (0, 14, 0)
+MIN_APP_VERSION = (0, 15, 0)
+MAX_APP_VERSION = (0, 15, 99)
 
 class SessionType(Enum):
     REGULAR   = 0
@@ -43,7 +44,7 @@ class SessionType(Enum):
 
 
 class Client:
-    def __init__(self, hostname, port=50000, script_version=REQUIRED_CAFFA_VERSION, session_type=SessionType.REGULAR):
+    def __init__(self, hostname, port=50000, min_app_version=MIN_APP_VERSION, max_app_version=MAX_APP_VERSION, session_type=SessionType.REGULAR):
         self.channel = grpc.insecure_channel(hostname + ":" + str(port))
         self.app_info_stub = App_pb2_grpc.AppStub(self.channel)
         self.object_stub = ObjectService_pb2_grpc.ObjectAccessStub(
@@ -53,7 +54,7 @@ class Client:
         self.log = logging.getLogger("grpc-logger")
         self.mutex = threading.Lock()
 
-        self.check_version(script_version)
+        self.check_version(min_app_version, max_app_version)
 
         proto_session_type = App_pb2.SessionType.REGULAR if session_type == SessionType.REGULAR else App_pb2.SessionType.OBSERVING
 
@@ -109,7 +110,7 @@ class Client:
             return object.Object(rpc_document.json, self.session_uuid, self.channel)
         return None
 
-    def check_version(self, script_version):
+    def check_version(self, min_app_version, max_app_version):
         app_info = self.app_info()
         self.log.info(
             "Found Caffa '"
@@ -126,29 +127,29 @@ class Client:
             app_info.major_version,
             app_info.minor_version,
             app_info.patch_version,
-        ) < script_version:
+        ) < min_app_version:
             raise RuntimeError(
-                "Caffa Version {}.{}.{} is too old. Script requires minimum {}.{}.{}".format(
+                "App Version {}.{}.{} is too old. The minimum required is {}.{}.{}".format(
                 app_info.major_version,
                 app_info.minor_version,
                 app_info.patch_version,
-                script_version[0],
-                script_version[1],
-                script_version[2])
+                min_app_version[0],
+                min_app_version[1],
+                min_app_version[2])
             )
-            return False
         if (
             app_info.major_version,
             app_info.minor_version,
             app_info.patch_version,
-        ) > script_version:
-            self.log.warning(
-                "Caffa Version %d.%d.%d is newer than the script version %d.%d.%d . This may or may not work!",
+        ) > max_app_version:
+            raise RuntimeError(
+                "App Version {}.{}.{} is too new. The maximum required is {}.{}.{}".format(
                 app_info.major_version,
                 app_info.minor_version,
                 app_info.patch_version,
-                script_version[0],
-                script_version[1],
-                script_version[2],
+                max_app_version[0],
+                max_app_version[1],
+                max_app_version[2])
             )
+
         return True
