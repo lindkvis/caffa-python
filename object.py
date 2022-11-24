@@ -183,7 +183,7 @@ class Object(object):
                 json_string = json.dumps(entry)
                 if json_string:
                     cached_data.append(Object(json_string))
-            self._object_cache[field_keyword]["value"] = cached_data
+            self._object_cache[field_keyword] = cached_data
             return cached_data
         return []
 
