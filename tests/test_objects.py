@@ -91,21 +91,6 @@ class TestObjects(object):
         demo_object.proxyIntVector = [1, 4, 42]
         assert demo_object.proxyIntVector == [1, 4, 42]
 
-    def test_int_set(self):
-        doc = self.testApp.document()
-        assert doc is not None
-
-        demo_object = doc.DemoObject
-        for field in demo_object.field_keywords():
-            log.debug("Found field: " + field)
-
-        demo_object.proxyIntVector = {1, 4, 42}
-
-        # Since we assigned a set we'll have to sort to compare
-        int_list = demo_object.proxyIntVector
-        int_list.sort()
-        assert int_list == [1, 4, 42]
-
     def test_float_vector(self):
         doc = self.testApp.document()
         assert doc is not None
