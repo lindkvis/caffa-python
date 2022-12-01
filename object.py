@@ -73,44 +73,6 @@ class Object(object):
         else:
             return None
 
-    def __generate_int_input_chunks(self, array, array_request):
-        index = -1
-        while index < len(array):
-            chunk = FieldService_pb2.GenericArray()
-            if index == -1:
-                chunk.request.CopyFrom(array_request)
-                index += 1
-            else:
-                actual_chunk_size = min(
-                    len(array) - index + 1, self._chunk_size)
-                chunk.ints.CopyFrom(
-                    FieldService_pb2.IntArray(
-                        data=array[index: index + actual_chunk_size])
-                )
-                index += actual_chunk_size
-            yield chunk
-        chunk = FieldService_pb2.GenericArray()
-        yield chunk
-
-    def __generate_float_input_chunks(self, array, array_request):
-        index = -1
-        while index < len(array):
-            chunk = FieldService_pb2.GenericArray()
-            if index == -1:
-                chunk.request.CopyFrom(array_request)
-                index += 1
-            else:
-                actual_chunk_size = min(
-                    len(array) - index + 1, self._chunk_size)
-                chunk.floats.CopyFrom(
-                    FieldService_pb2.FloatArray(
-                        data=array[index: index + actual_chunk_size])
-                )
-                index += actual_chunk_size
-            yield chunk
-        chunk = FieldService_pb2.GenericArray()
-        yield chunk
-
     def make_json(self):
         for key, object in self._object_cache.items():
             self._json_object[key] = object.make_json()
@@ -159,18 +121,12 @@ class Object(object):
                 keyword=field_keyword,
                 session=session,
             )
+            result = self._field_stub.GetValue(field_request).value
             caffa_objects = []
-            rpc_results = self._field_stub.GetArrayValue(field_request)
-            for rpc_result in rpc_results:
-                rpc_oneof = rpc_result.WhichOneof("data")
-                rpc_data_array = getattr(rpc_result, rpc_oneof)
-                for rpc_data_item in rpc_data_array.objects:
-                    if rpc_data_item is not None:
-                        caffa_objects.append(
-                            Object(
-                                rpc_data_item.json, self._session_uuid, self._channel
-                            )
-                        )
+            json_array = json.loads(result)
+
+            for json_object in json_array:
+                caffa_objects.append(Object(json.dumps(json_object), self._session_uuid, self._channel))
             return caffa_objects
         elif field_keyword in self._json_object:
             if field_keyword in self._object_cache:
@@ -187,7 +143,7 @@ class Object(object):
             return cached_data
         return []
 
-    def get_scalar(self, field_keyword):
+    def get_primitives(self, field_keyword):
         result = None
         if self._channel is not None:
             session = App_pb2.SessionMessage(uuid=self._session_uuid)
@@ -207,86 +163,6 @@ class Object(object):
             return result
         return None
 
-    def get_list(self, field_keyword):
-        data_list = []
-        if self._channel is not None:
-            session = App_pb2.SessionMessage(uuid=self._session_uuid)
-
-            field_request = FieldService_pb2.FieldRequest(
-                class_keyword=self.keyword(),
-                uuid=self.uuid(),
-                keyword=field_keyword,
-                session=session,
-            )
-            rpc_results = self._field_stub.GetArrayValue(field_request)
-            for rpc_result in rpc_results:
-                rpc_oneof = rpc_result.WhichOneof("data")
-                rpc_data_array = getattr(rpc_result, rpc_oneof)
-                for rpc_data_item in rpc_data_array.data:
-                    data_list.append(rpc_data_item)
-        elif self._json_object and field_keyword in self._json_object:
-            list_field = self._json_object[field_keyword]
-            for value in list_field["value"]:
-                data_list.append(value)
-        return data_list
-
-    def set_int_list(self, field_keyword, values):
-        if self._channel is not None:
-            session = App_pb2.SessionMessage(uuid=self._session_uuid)
-
-            field_request = FieldService_pb2.FieldRequest(
-                class_keyword=self.keyword(),
-                uuid=self.uuid(),
-                keyword=field_keyword,
-                session=session,
-            )
-            array_request = FieldService_pb2.ArrayRequest(
-                field=field_request, value_count=len(values)
-            )
-            rpc_iterator = self.__generate_int_input_chunks(
-                values, array_request)
-            self._field_stub.SetArrayValue(rpc_iterator)
-        elif self._json_object and field_keyword in self._json_object:
-            self._json_object[field_keyword]["value"] = values
-
-    def set_float_list(self, field_keyword, values):
-        if self._channel is not None:
-            session = App_pb2.SessionMessage(uuid=self._session_uuid)
-
-            field_request = FieldService_pb2.FieldRequest(
-                class_keyword=self.keyword(),
-                uuid=self.uuid(),
-                keyword=field_keyword,
-                session=session,
-            )
-            array_request = FieldService_pb2.ArrayRequest(
-                field=field_request, value_count=len(values)
-            )
-            rpc_iterator = self.__generate_float_input_chunks(
-                values, array_request)
-            self._field_stub.SetArrayValue(rpc_iterator)
-        elif self._json_object and field_keyword in self._json_object:
-            self._json_object[field_keyword]["value"] = values
-
-    def set_double_list(self, field_keyword, values):
-        if self._channel is not None:
-            session = App_pb2.SessionMessage(uuid=self._session_uuid)
-
-            field_request = FieldService_pb2.FieldRequest(
-                class_keyword=self.keyword(),
-                uuid=self.uuid(),
-                keyword=field_keyword,
-                session=session,
-            )
-            array_request = FieldService_pb2.ArrayRequest(
-                field=field_request, value_count=len(values)
-            )
-            rpc_iterator = self.__generate_double_input_chunks(
-                values, array_request)
-            self._field_stub.SetArrayValue(rpc_iterator)
-        elif self._json_object and field_keyword in self._json_object:
-            self._json_object[field_keyword]["value"] = values
-
     def get(self, field_keyword):
         data_type = self.type(field_keyword)
         Object._log.debug(
@@ -297,10 +173,9 @@ class Object(object):
                 return self.get_object(field_keyword)
             elif data_type == "object[]":
                 return self.get_objects(field_keyword)
-            elif not data_type.endswith("[]"):
-                return self.get_scalar(field_keyword)
             else:
-                return self.get_list(field_keyword)
+                return self.get_primitives(field_keyword)
+        print (field_keyword, data_type)
         raise Exception("Field " + field_keyword + " did not exist in object")
         return None
 
@@ -312,29 +187,22 @@ class Object(object):
             field_keyword,
             data_type,
         )
-        if data_type == "int32[]":
-            self.set_int_list(field_keyword, list(value))
-        elif data_type == "float[]":
-            self.set_float_list(field_keyword, list(value))
-        elif data_type == "double[]":
-            self.set_double_list(field_keyword, list(value))
-        else:
-            if self._channel is not None:
-                session = App_pb2.SessionMessage(uuid=self._session_uuid)
+        if self._channel is not None:
+            session = App_pb2.SessionMessage(uuid=self._session_uuid)
 
-                field_request = FieldService_pb2.FieldRequest(
-                    class_keyword=self.keyword(),
-                    uuid=self.uuid(),
-                    keyword=field_keyword,
-                    index=address_offset,
-                    session=session,
-                )
-                setter_request = FieldService_pb2.SetterRequest(
-                    field=field_request, value=json.dumps(value)
-                )
-                self._field_stub.SetValue(setter_request)
-            else:
-                self._json_object[field_keyword]["value"] = value
+            field_request = FieldService_pb2.FieldRequest(
+                class_keyword=self.keyword(),
+                uuid=self.uuid(),
+                keyword=field_keyword,
+                index=address_offset,
+                session=session,
+            )
+            setter_request = FieldService_pb2.SetterRequest(
+                field=field_request, value=json.dumps(value)
+            )
+            self._field_stub.SetValue(setter_request)
+        else:
+            self._json_object[field_keyword]["value"] = value
 
     def set_fields(self, **kwargs):
         for key, value in kwargs.items():
