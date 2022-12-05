@@ -39,8 +39,8 @@ class TestObjects(object):
         doc = self.testApp.document()
         assert doc is not None
         keywords = doc.field_keywords()
-        assert "DemoObject" in keywords
-        demo_object = doc.DemoObject
+        assert "demoObject" in keywords
+        demo_object = doc.demoObject
         assert demo_object is not None
         log.debug("Found demo object: %s", demo_object.dump())
 
@@ -49,7 +49,7 @@ class TestObjects(object):
         assert doc is not None
         doc_methods = doc.methods()
         assert len(doc_methods) == 0
-        demo_object = doc.DemoObject
+        demo_object = doc.demoObject
         assert demo_object is not None
         obj_methods = demo_object.methods()
         assert len(obj_methods) > 0
@@ -85,7 +85,7 @@ class TestObjects(object):
         doc = self.testApp.document()
         assert doc is not None
 
-        demo_object = doc.DemoObject
+        demo_object = doc.demoObject
         for field in demo_object.field_keywords():
             log.debug("Found field: " + field)
         demo_object.proxyIntVector = [1, 4, 42]
@@ -95,14 +95,14 @@ class TestObjects(object):
         doc = self.testApp.document()
         assert doc is not None
 
-        demo_object = doc.DemoObject
+        demo_object = doc.demoObject
         demo_object.floatVector = [1.0, 3.0, -42.0]
         assert demo_object.floatVector == [1.0, 3.0, -42.0]
 
     def test_app_enum(self):
         doc = self.testApp.document()
         assert doc is not None
-        demo_object = doc.DemoObject
+        demo_object = doc.demoObject
         demo_object.enumField = "T3"
         assert demo_object.enumField == "T3"
 
