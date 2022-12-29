@@ -35,6 +35,9 @@ class Object(object):
         self._json_object = json.loads(json_object)
         self._session_uuid = session_uuid
         self._object_cache = {}
+        self._channel = None
+        self._field_stub = None
+        self._object_stub = None
 
         if channel is not None:
             self._channel = channel
@@ -42,24 +45,6 @@ class Object(object):
                 self._channel)
             self._object_stub = ObjectService_pb2_grpc.ObjectAccessStub(
                 self._channel)
-
-    # Overload so that we can ask for object.name instead of object.get("name")
-    def __getattr__(self, name):
-        if not name.startswith("_"):
-            return self.get(name)
-
-    # Overload so that we can set object.name = "something" instead of object.set("name", "something")
-    def __setattr__(self, name, value):
-        if not name.startswith("_"):
-            field = (
-                self._json_object[name]
-                if self._json_object and name in self._json_object
-                else None
-            )
-            if field:
-                return self.set(name, value)
-            Object._log.error("Field %s does not exist in object", name)
-        super().__setattr__(name, value)
 
     def keyword(self):
         return self._json_object["class"]
@@ -126,7 +111,8 @@ class Object(object):
             json_array = json.loads(result)
 
             for json_object in json_array:
-                caffa_objects.append(Object(json.dumps(json_object), self._session_uuid, self._channel))
+                caffa_objects.append(
+                    Object(json.dumps(json_object), self._session_uuid, self._channel))
             return caffa_objects
         elif field_keyword in self._json_object:
             if field_keyword in self._object_cache:
@@ -175,7 +161,7 @@ class Object(object):
                 return self.get_objects(field_keyword)
             else:
                 return self.get_primitives(field_keyword)
-        print (field_keyword, data_type)
+        print(field_keyword, data_type)
         raise Exception("Field " + field_keyword + " did not exist in object")
         return None
 
