@@ -35,6 +35,7 @@ class Object(object):
         self._json_object = json.loads(json_object)
         self._session_uuid = session_uuid
         self._object_cache = {}
+        self._channel = None
 
         if channel is not None:
             self._channel = channel
@@ -42,24 +43,6 @@ class Object(object):
                 self._channel)
             self._object_stub = ObjectService_pb2_grpc.ObjectAccessStub(
                 self._channel)
-
-    # Overload so that we can ask for object.name instead of object.get("name")
-    def __getattr__(self, name):
-        if not name.startswith("_"):
-            return self.get(name)
-
-    # Overload so that we can set object.name = "something" instead of object.set("name", "something")
-    def __setattr__(self, name, value):
-        if not name.startswith("_"):
-            field = (
-                self._json_object[name]
-                if self._json_object and name in self._json_object
-                else None
-            )
-            if field:
-                return self.set(name, value)
-            Object._log.error("Field %s does not exist in object", name)
-        super().__setattr__(name, value)
 
     def keyword(self):
         return self._json_object["class"]
