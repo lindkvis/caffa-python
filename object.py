@@ -238,3 +238,34 @@ class Object(object):
 
     def dump(self):
         return json.dumps(self.make_json())
+
+class Document(Object):
+    """The Document class is a top level object acting as a "Project" or container"""
+
+    def __init__(self, object):
+        self._json_object = object._json_object
+        self._session_uuid = object._session_uuid
+        self._object_cache = object._object_cache
+        self._channel = object._channel
+        self._field_stub = object._field_stub
+        self._object_stub = object._object_stub
+
+    @property
+    def id(self):
+        """A unique document ID"""
+
+        return self.get("id")
+
+    @id.setter
+    def id(self, value):
+        return self.set("id", value)
+
+    @property
+    def fileName(self):
+        """The filename of the document if saved to disk"""
+
+        return self.get("fileName")
+
+    @fileName.setter
+    def fileName(self, value):
+        return self.set("fileName", value)
