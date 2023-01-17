@@ -31,8 +31,8 @@ class Object(object):
     _log = logging.getLogger("caffa-object")
     _chunk_size = 4096
 
-    def __init__(self, json_object, session_uuid="", channel=None):
-        self._json_object = json.loads(json_object)
+    def __init__(self, json_object="", session_uuid="", channel=None):
+        self._json_object = json.loads(json_object) if json_object else { "class": self.__class__.__name__}
         self._session_uuid = session_uuid
         self._object_cache = {}
         self._channel = None
@@ -57,8 +57,16 @@ class Object(object):
             return None
 
     def make_json(self):
-        for key, object in self._object_cache.items():
-            self._json_object[key] = object.make_json()
+        if self._object_cache:
+            for key, object in self._object_cache.items():
+                self._json_object[key] = object.make_json()
+
+        for var in vars(self):
+            if not var.startswith("_"):
+                value = getattr(self, var)
+                if isinstance(value, Object):
+                    value = value.make_json()    
+                self._json_object[var] = value
         return self._json_object
 
     def rpc_object(self):
@@ -186,6 +194,9 @@ class Object(object):
             self._field_stub.SetValue(setter_request)
         else:
             self._json_object[field_keyword]["value"] = value
+
+    def create_field(self, keyword, type, value):
+        self._json_object[keyword] = {"type": type, "value": value}
 
     def set_fields(self, **kwargs):
         for key, value in kwargs.items():
