@@ -107,7 +107,7 @@ class Client:
         )
         rpc_document = self.object_stub.GetDocument(doc_request)
         if rpc_document is not None:
-            return object.Object(rpc_document.json, self.session_uuid, self.channel)
+            return object.Document(object.Object(rpc_document.json, self.session_uuid, self.channel))
         return None
 
     def check_version(self, min_app_version, max_app_version):
