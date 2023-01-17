@@ -40,7 +40,7 @@ class TestObjects(object):
         assert doc is not None
         keywords = doc.field_keywords()
         assert "demoObject" in keywords
-        demo_object = doc.demoObject
+        demo_object = doc.get("demoObject")
         assert demo_object is not None
         log.debug("Found demo object: %s", demo_object.dump())
 
@@ -49,7 +49,7 @@ class TestObjects(object):
         assert doc is not None
         doc_methods = doc.methods()
         assert len(doc_methods) == 0
-        demo_object = doc.demoObject
+        demo_object = doc.get("demoObject")
         assert demo_object is not None
         obj_methods = demo_object.methods()
         assert len(obj_methods) > 0
@@ -64,12 +64,12 @@ class TestObjects(object):
 
         result = demo_object.execute(method)
         assert result is not None
-        assert result.status
+        assert result.get("status")
 
-        assert demo_object.doubleField == 99.0
-        assert demo_object.intField == 41
-        assert demo_object.stringField == "AnotherValue"
-        assert demo_object.proxyIntVector == [1, 2, 97]
+        assert demo_object.get("doubleField") == 99.0
+        assert demo_object.get("intField") == 41
+        assert demo_object.get("stringField") == "AnotherValue"
+        assert demo_object.get("proxyIntVector") == [1, 2, 97]
 
     def test_non_existing_field(self):
         doc = self.testApp.document()
@@ -85,29 +85,29 @@ class TestObjects(object):
         doc = self.testApp.document()
         assert doc is not None
 
-        demo_object = doc.demoObject
+        demo_object = doc.get("demoObject")
         for field in demo_object.field_keywords():
             log.debug("Found field: " + field)
-        demo_object.proxyIntVector = [1, 4, 42]
-        assert demo_object.proxyIntVector == [1, 4, 42]
+        demo_object.set("proxyIntVector", [1, 4, 42])
+        assert demo_object.get("proxyIntVector") == [1, 4, 42]
 
     def test_float_vector(self):
         doc = self.testApp.document()
         assert doc is not None
 
-        demo_object = doc.demoObject
+        demo_object = doc.get("demoObject")
         demo_object.floatVector = [1.0, 3.0, -42.0]
         assert demo_object.floatVector == [1.0, 3.0, -42.0]
 
     def test_app_enum(self):
         doc = self.testApp.document()
         assert doc is not None
-        demo_object = doc.demoObject
-        demo_object.enumField = "T3"
-        assert demo_object.enumField == "T3"
+        demo_object = doc.get("demoObject")
+        demo_object.set("enumField", "T3")
+        assert demo_object.get("enumField") == "T3"
 
         try:
-            demo_object.enumField = "InvalidValue"
+            demo_object.set("enumField", "InvalidValue")
             pytest.fail("Should have failed to set invalid value")
 
         except Exception as e:
