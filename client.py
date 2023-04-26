@@ -35,8 +35,8 @@ from . import object
 # By default we try to match the caffa-version
 # However the application using caffa should set its own version which can be checked
 # against by providing the script-version parameter
-MIN_APP_VERSION = (0, 90, 0)
-MAX_APP_VERSION = (0, 90, 99)
+MIN_APP_VERSION = (0, 99, 0)
+MAX_APP_VERSION = (0, 99, 99)
 
 class SessionType(Enum):
     REGULAR   = 0
