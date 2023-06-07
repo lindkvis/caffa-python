@@ -26,13 +26,13 @@ import FieldService_pb2_grpc
 import ObjectService_pb2
 import ObjectService_pb2_grpc
 
+from . import method
 
 class Object(object):
     _log = logging.getLogger("caffa-object")
-    _chunk_size = 4096
 
     def __init__(self, json_object="", session_uuid="", channel=None):
-        self._json_object = json.loads(json_object) if json_object else { "class": self.__class__.__name__}
+        self._json_object = json.loads(json_object) if json_object else { "keyword": self.__class__.__name__}
         self._session_uuid = session_uuid
         self._object_cache = {}
         self._channel = None
@@ -45,7 +45,7 @@ class Object(object):
                 self._channel)
 
     def keyword(self):
-        return self._json_object["class"]
+        return self._json_object["keyword"]
 
     def uuid(self):
         return self._json_object["uuid"]
@@ -166,7 +166,6 @@ class Object(object):
                 return self.get_objects(field_keyword)
             else:
                 return self.get_primitives(field_keyword)
-        print (field_keyword, data_type)
         raise Exception("Field " + field_keyword + " did not exist in object")
         return None
 
@@ -211,7 +210,7 @@ class Object(object):
         rpc_object_list = self._object_stub.ListMethods(request).objects
         caffa_object_list = []
         for rpc_object in rpc_object_list:
-            caffa_object_list.append(Object(rpc_object.json))
+            caffa_object_list.append(method.Method(self, rpc_object.json))
         return caffa_object_list
 
     def method(self, keyword):
@@ -221,20 +220,19 @@ class Object(object):
                 return single_method
         return None
 
-    def execute(self, object_method):
+    def execute(self, method_json):
         session = App_pb2.SessionMessage(uuid=self._session_uuid)
 
         method_request = ObjectService_pb2.MethodRequest(
             self_object=self.rpc_object(),
-            method=object_method.keyword(),
-            params=object_method.rpc_object(),
+            method=ObjectService_pb2.RpcObject(json=json.dumps(method_json)),
             session=session,
         )
         try:
             result = self._object_stub.ExecuteMethod(method_request)
         except grpc.RpcError as e:
             raise RuntimeError(e.details())
-        return Object(result.json) if result.json else None
+        return result.json if result.json else None
 
     def dump(self):
         return json.dumps(self.make_json())

@@ -2,6 +2,7 @@ import logging
 import sys
 import pytest
 import caffa
+import json
 
 log = logging.getLogger("test_objects")
 
@@ -51,20 +52,19 @@ class TestObjects(object):
         assert len(doc_methods) == 0
         demo_object = doc.get("demoObject")
         assert demo_object is not None
-        obj_methods = demo_object.methods()
-        assert len(obj_methods) > 0
+        copy_values = demo_object.method("copyValues")
 
-        method = obj_methods[0]
-        log.debug("Found method: %s", method.dump())
+        print("Found method: ", copy_values.dump())
 
-        method.doubleArgument = 99.0
-        method.intArgument = 41
-        method.stringArgument = "AnotherValue"
-        method.intArrayArgument = [1, 2, 97]
+        copy_values.execute(intValue=41, stringValue="AnotherValue", doubleValue=99.0)        
 
-        result = demo_object.execute(method)
-        assert result is not None
-        assert result.get("status")
+        setIntVectorMethod = demo_object.method("setIntVector")
+        setIntVectorMethod.execute(intVector=[1, 2, 97])
+
+        getIntVectorMethod = demo_object.method("getIntVector")
+        result = getIntVectorMethod.execute()
+        assert(result == [1, 2, 97])
+        print("Test methods result: ", result)
 
         assert demo_object.get("doubleField") == 99.0
         assert demo_object.get("intField") == 41
