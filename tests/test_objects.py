@@ -57,18 +57,20 @@ class TestObjects(object):
         method = obj_methods[0]
         log.debug("Found method: %s", method.dump())
 
-        method.doubleArgument = 99.0
-        method.intArgument = 41
-        method.stringArgument = "AnotherValue"
-        method.intArrayArgument = [1, 2, 97]
+        method.set_argument("intValue", 41)
+        method.set_argument("doubleValue", 99.0)
+        method.set_argument("stringValue", "AnotherValue")
 
-        result = demo_object.execute(method)
-        assert result is not None
-        assert result.get("status")
+        result = method.execute()
 
         assert demo_object.get("doubleField") == 99.0
         assert demo_object.get("intField") == 41
         assert demo_object.get("stringField") == "AnotherValue"
+
+        method = demo_object.method("setIntVector")
+        method.set_argument("intVector", [1, 2, 97])
+        method.execute()
+
         assert demo_object.get("proxyIntVector") == [1, 2, 97]
 
     def test_non_existing_field(self):
