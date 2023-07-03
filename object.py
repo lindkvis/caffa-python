@@ -26,29 +26,42 @@ import FieldService_pb2_grpc
 import ObjectService_pb2
 import ObjectService_pb2_grpc
 
+from .method import Method
 
 class Object(object):
     _log = logging.getLogger("caffa-object")
-    _chunk_size = 4096
 
-    def __init__(self, json_object="", session_uuid="", channel=None):
-        self._json_object = json.loads(json_object) if json_object else { "class": self.__class__.__name__}
+    def __init__(self, json_object="", session_uuid="", grpc_channel=None, local=False):
+        if isinstance(json_object, dict):
+            self._json_object = json_object
+        else:
+            self._json_object = json.loads(json_object) if json_object else { "keyword": self.__class__.__name__}
+
         self._session_uuid = session_uuid
         self._object_cache = {}
-        self._channel = None
+        self._grpc_channel = grpc_channel
+        self._local = local
 
-        if channel is not None:
-            self._channel = channel
+        if self._grpc_channel is not None:
             self._field_stub = FieldService_pb2_grpc.FieldAccessStub(
-                self._channel)
+                self._grpc_channel)
             self._object_stub = ObjectService_pb2_grpc.ObjectAccessStub(
-                self._channel)
+                self._grpc_channel)
+
+        if not self._local:
+            assert self._grpc_channel is not None
 
     def keyword(self):
-        return self._json_object["class"]
+        return self._json_object["keyword"]
 
     def uuid(self):
         return self._json_object["uuid"]
+
+    def session_uuid(self):
+        return self._session_uuid
+
+    def grpc_channel(self):
+        return self._grpc_channel
 
     def type(self, field_keyword):
         if self._json_object and field_keyword in self._json_object:
@@ -70,7 +83,7 @@ class Object(object):
         return self._json_object
 
     def rpc_object(self):
-        return ObjectService_pb2.RpcObject(json=json.dumps(self.make_json()))
+        return ObjectService_pb2.RpcObject(json=self.dump())
 
     def field_keywords(self):
         keywords = []
@@ -79,7 +92,7 @@ class Object(object):
         return keywords
 
     def get_object(self, field_keyword):
-        if self._channel is not None:
+        if not self._local:
             session = App_pb2.SessionMessage(uuid=self._session_uuid)
             field_request = FieldService_pb2.FieldRequest(
                 class_keyword=self.keyword(),
@@ -89,7 +102,7 @@ class Object(object):
             )
             result = self._field_stub.GetValue(field_request).value
             return (
-                Object(result, self._session_uuid, self._channel)
+                Object(result, self._session_uuid, self._grpc_channel)
                 if result is not None
                 else None
             )
@@ -104,7 +117,7 @@ class Object(object):
             return None
 
     def get_objects(self, field_keyword):
-        if self._channel is not None:
+        if not self._local:
             session = App_pb2.SessionMessage(uuid=self._session_uuid)
             field_request = FieldService_pb2.FieldRequest(
                 class_keyword=self.keyword(),
@@ -117,7 +130,7 @@ class Object(object):
             json_array = json.loads(result)
 
             for json_object in json_array:
-                caffa_objects.append(Object(json.dumps(json_object), self._session_uuid, self._channel))
+                caffa_objects.append(Object(json.dumps(json_object), self._session_uuid, self._grpc_channel))
             return caffa_objects
         elif field_keyword in self._json_object:
             if field_keyword in self._object_cache:
@@ -136,7 +149,7 @@ class Object(object):
 
     def get_primitives(self, field_keyword):
         result = None
-        if self._channel is not None:
+        if not self._local:
             session = App_pb2.SessionMessage(uuid=self._session_uuid)
             field_request = FieldService_pb2.FieldRequest(
                 class_keyword=self.keyword(),
@@ -178,7 +191,7 @@ class Object(object):
             field_keyword,
             data_type,
         )
-        if self._channel is not None:
+        if not self._local:
             session = App_pb2.SessionMessage(uuid=self._session_uuid)
 
             field_request = FieldService_pb2.FieldRequest(
@@ -209,10 +222,10 @@ class Object(object):
         )
 
         rpc_object_list = self._object_stub.ListMethods(request).objects
-        caffa_object_list = []
+        caffa_method_list = []
         for rpc_object in rpc_object_list:
-            caffa_object_list.append(Object(rpc_object.json))
-        return caffa_object_list
+            caffa_method_list.append(Method(self, rpc_object.json))
+        return caffa_method_list
 
     def method(self, keyword):
         all_methods = self.methods()
@@ -226,29 +239,32 @@ class Object(object):
 
         method_request = ObjectService_pb2.MethodRequest(
             self_object=self.rpc_object(),
-            method=object_method.keyword(),
-            params=object_method.rpc_object(),
-            session=session,
+            method=object_method.rpc_object(),
+            session=session
         )
         try:
             result = self._object_stub.ExecuteMethod(method_request)
         except grpc.RpcError as e:
             raise RuntimeError(e.details())
-        return Object(result.json) if result.json else None
+
+        return_json = json.loads(result.json)
+        if "value" in return_json:
+            return return_json["value"]
+        else:
+            return None
 
     def dump(self):
         return json.dumps(self.make_json())
 
+
+    def upgrade(self, cls):
+        return cls(self._json_object, self._session_uuid, self._grpc_channel, self._local)
+
 class Document(Object):
     """The Document class is a top level object acting as a "Project" or container"""
 
-    def __init__(self, object):
-        self._json_object = object._json_object
-        self._session_uuid = object._session_uuid
-        self._object_cache = object._object_cache
-        self._channel = object._channel
-        self._field_stub = object._field_stub
-        self._object_stub = object._object_stub
+    def __init__(self, json_object="", session_uuid="", grpc_channel=None, local=False):
+        super().__init__(json_object, session_uuid, grpc_channel, local)
 
     @property
     def id(self):

@@ -45,10 +45,10 @@ class SessionType(Enum):
 
 class Client:
     def __init__(self, hostname, port=50000, min_app_version=MIN_APP_VERSION, max_app_version=MAX_APP_VERSION, session_type=SessionType.REGULAR):
-        self.channel = grpc.insecure_channel(hostname + ":" + str(port))
-        self.app_info_stub = App_pb2_grpc.AppStub(self.channel)
+        self.grpc_channel = grpc.insecure_channel(hostname + ":" + str(port))
+        self.app_info_stub = App_pb2_grpc.AppStub(self.grpc_channel)
         self.object_stub = ObjectService_pb2_grpc.ObjectAccessStub(
-            self.channel)
+            self.grpc_channel)
         self.hostname = hostname
         self.port_number = port
         self.log = logging.getLogger("grpc-logger")
@@ -107,7 +107,7 @@ class Client:
         )
         rpc_document = self.object_stub.GetDocument(doc_request)
         if rpc_document is not None:
-            return object.Document(object.Object(rpc_document.json, self.session_uuid, self.channel))
+            return object.Document(rpc_document.json, self.session_uuid, self.grpc_channel)
         return None
 
     def check_version(self, min_app_version, max_app_version):
