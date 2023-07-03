@@ -32,3 +32,4 @@ generate_proto_code()
 
 from .client import Client, SessionType
 from .object import Object, Document
+from .method import Method
