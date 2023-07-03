@@ -173,13 +173,12 @@ class Object(object):
             "Getting data for keyword=%s and data type=%s", field_keyword, data_type
         )
         if data_type is not None:
-            if data_type == "object":
-                return self.get_object(field_keyword)
-            elif data_type == "object[]":
+            if data_type.startswith("object[]"):
                 return self.get_objects(field_keyword)
+            elif data_type.startswith("object"):
+                return self.get_object(field_keyword)
             else:
                 return self.get_primitives(field_keyword)
-        print (field_keyword, data_type)
         raise Exception("Field " + field_keyword + " did not exist in object")
         return None
 
