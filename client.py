@@ -17,19 +17,16 @@
 #   for more details.
 #
 
-import grpc
+import json
 import logging
+import requests
 import time
 import threading
 
-import App_pb2
-import App_pb2_grpc
-
-import ObjectService_pb2
-import ObjectService_pb2_grpc
-
-from enum import Enum
+from pprint import pprint
+from enum import IntEnum
 from . import object
+from types import SimpleNamespace
 
 # Update the (x, y, z) tuple to match minimum required version (0, 6, 4) means minimum 0.6.4
 # By default we try to match the caffa-version
@@ -38,28 +35,23 @@ from . import object
 MIN_APP_VERSION = (0, 99, 0)
 MAX_APP_VERSION = (0, 99, 99)
 
-class SessionType(Enum):
-    REGULAR   = 0
-    OBSERVING = 1
+class SessionType(IntEnum):
+    INVALID   = 0
+    REGULAR   = 1
+    OBSERVING = 2
 
 
 class Client:
     def __init__(self, hostname, port=50000, min_app_version=MIN_APP_VERSION, max_app_version=MAX_APP_VERSION, session_type=SessionType.REGULAR):
-        self.grpc_channel = grpc.insecure_channel(hostname + ":" + str(port))
-        self.app_info_stub = App_pb2_grpc.AppStub(self.grpc_channel)
-        self.object_stub = ObjectService_pb2_grpc.ObjectAccessStub(
-            self.grpc_channel)
         self.hostname = hostname
-        self.port_number = port
+        self.port = port
         self.log = logging.getLogger("grpc-logger")
         self.mutex = threading.Lock()
 
         self.check_version(min_app_version, max_app_version)
 
-        proto_session_type = App_pb2.SessionType.REGULAR if session_type == SessionType.REGULAR else App_pb2.SessionType.OBSERVING
+        self.session_uuid = self.create_session(session_type)
 
-        msg = App_pb2.SessionParameters(type=proto_session_type)
-        self.session_uuid = self.app_info_stub.CreateSession(msg).uuid
         if not self.session_uuid:
             raise RuntimeError("Failed to create session")
         self.log.debug("Session uuid: %s", self.session_uuid)
@@ -67,23 +59,76 @@ class Client:
         self.keepalive_thread = threading.Thread(target=self.send_keepalives)
         self.keepalive_thread.start()
 
+    def _build_url(self, path):
+        url = "http://" + self.hostname + ":" + str(self.port) + path
+        if hasattr(self, "session_uuid"):
+            url += "?session_uuid=" + self.session_uuid
+        return url
+
+    def _perform_get_request(self, path):
+        url = self._build_url(path)
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            return response.text
+        except requests.exceptions.HTTPError as e:
+            self.log.error("Failed GET request with error ", response.text)
+        except requests.exceptions.RequestException as e:
+            self.log.error("Failed GET request with error ", e)
+            return ""
+    
+    def _perform_delete_request(self, path):
+        url = self._build_url(path)
+        try:
+            response = requests.delete(url)
+            response.raise_for_status()
+            return response.text
+        except requests.exceptions.RequestException as e:
+            self.log.error("Failed DELETE request with error ", e)
+            return ""
+
+    def _perform_put_request(self, path, body=""):
+        url = self._build_url(path)
+        try:
+            response = requests.put(url, json=body)
+            response.raise_for_status()
+            return response.text
+        except requests.exceptions.RequestException as e:
+            self.log.error("Failed PUT request with error ", e)
+            return ""        
+
+    def _json_text_to_object(self, text):
+        return json.loads(text, object_hook=lambda d: SimpleNamespace(**d))
+
+    def schema_list(self):
+        all_schemas = json.loads(self._perform_get_request("/schemas"))
+        return all_schemas
+
+    def schema(self, keyword):
+        schema = json.loads(self._perform_get_request("/schemas/" + keyword))
+        return schema
+
+    def execute(self, object_uuid, method_name, arguments):
+        return json.loads(self._perform_put_request("/uuid/" + object_uuid + "/" + method_name, arguments))
+
     def app_info(self):
-        msg = App_pb2.NullMessage()
-        return self.app_info_stub.GetAppInfo(msg)
+        return self._json_text_to_object(self._perform_get_request("/app/info"))
+
+    def create_session(self, session_type):
+        response = self._json_text_to_object(self._perform_put_request("/session/create?type="+str(int(session_type))))
+        return response.session_uuid
 
     def cleanup(self):
         try:
             self.mutex.acquire()
             self.keep_alive = False
-            msg = App_pb2.SessionMessage(uuid=self.session_uuid)
-            self.app_info_stub.DestroySession(msg)
-            self.app_info_stub = None
+            if self.session_uuid:
+                self._perform_delete_request("/session/destroy")
         finally:
             self.mutex.release()
 
     def send_keepalive(self):
-        msg = App_pb2.SessionMessage(uuid=self.session_uuid)
-        self.app_info_stub.KeepSessionAlive(msg)
+        self._perform_put_request("/session/keepalive")
 
     def send_keepalives(self):
         while True:
@@ -92,26 +137,30 @@ class Client:
                 self.mutex.acquire()
                 if not self.keep_alive:
                     break;
-                elif self.app_info_stub is not None:
-                    self.send_keepalive()
                 else:
-                    break
+                    self.send_keepalive()
             finally:
                 self.mutex.release()
 
-    def document(self, document_id=""):
-        session = App_pb2.SessionMessage(uuid=self.session_uuid)
+    def document(self, document_id):
+        assert len(document_id) > 0
+        json_text = self._perform_get_request("/" + document_id)
+        json_object = json.loads(json_text)
+        keyword = json_object["keyword"]
+        schema = self.schema(keyword)
+        cls = object.create_class(keyword, schema)
 
-        doc_request = ObjectService_pb2.DocumentRequest(
-            document_id=document_id, session=session
-        )
-        rpc_document = self.object_stub.GetDocument(doc_request)
-        if rpc_document is not None:
-            return object.Document(rpc_document.json, self.session_uuid, self.grpc_channel)
-        return None
+        return cls(json_text, self, False)
+    
+    def get_field_value(self, object_uuid, field_name):
+        return self._perform_get_request("/uuid/" + object_uuid + "/" + field_name)
+
+    def set_field_value(self, object_uuid, field_name, json_value):
+        return self._perform_put_request("/uuid/" + object_uuid + "/" + field_name, json_value)
 
     def check_version(self, min_app_version, max_app_version):
         app_info = self.app_info()
+        print("APP INFO: ", app_info)
         self.log.info(
             "Found Caffa '"
             + app_info.name

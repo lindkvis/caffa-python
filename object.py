@@ -16,271 +16,126 @@
 #   See the GNU Lesser General Public License at <<http:#www.gnu.org/licenses/lgpl-2.1.html>>
 #   for more details.
 #
-import grpc
 import json
 import logging
 
-import App_pb2
-import FieldService_pb2
-import FieldService_pb2_grpc
-import ObjectService_pb2
-import ObjectService_pb2_grpc
-
-from .method import Method
+from .method import Method, create_method_class
 
 class Object(object):
     _log = logging.getLogger("caffa-object")
 
-    def __init__(self, json_object="", session_uuid="", grpc_channel=None, local=False):
-        if isinstance(json_object, dict):
-            self._json_object = json_object
-        else:
-            self._json_object = json.loads(json_object) if json_object else { "keyword": self.__class__.__name__}
+    _methods = []
 
-        self._session_uuid = session_uuid
+    def __init__(self, json_object="", client=None, local=False):
+        if isinstance(json_object, dict):
+            self._fields = json_object
+        else:
+            self._fields = json.loads(json_object)
+
         self._object_cache = {}
-        self._grpc_channel = grpc_channel
+        self._client = client
         self._local = local
 
-        if self._grpc_channel is not None:
-            self._field_stub = FieldService_pb2_grpc.FieldAccessStub(
-                self._grpc_channel)
-            self._object_stub = ObjectService_pb2_grpc.ObjectAccessStub(
-                self._grpc_channel)
-
         if not self._local:
-            assert self._grpc_channel is not None
+            assert self._client is not None
 
+        self._method_list = []
+        for method in self.__class__._methods:
+            method_instance = method(self_object = self)
+            setattr(self, method.static_name(), method_instance)
+            self._method_list.append(method_instance)
+    
+
+    @property
     def keyword(self):
-        return self._json_object["keyword"]
+        return self._fields["keyword"]
 
-    def uuid(self):
-        return self._json_object["uuid"]
+    def client(self):
+        return self._client
 
-    def session_uuid(self):
-        return self._session_uuid
-
-    def grpc_channel(self):
-        return self._grpc_channel
-
-    def type(self, field_keyword):
-        if self._json_object and field_keyword in self._json_object:
-            return self._json_object[field_keyword]["type"]
-        else:
-            return None
-
-    def make_json(self):
+    def to_json(self):
         if self._object_cache:
             for key, object in self._object_cache.items():
-                self._json_object[key] = object.make_json()
+                self._fields[key] = object.make_json()
 
         for var in vars(self):
             if not var.startswith("_"):
                 value = getattr(self, var)
                 if isinstance(value, Object):
                     value = value.make_json()    
-                self._json_object[var] = value
-        return self._json_object
-
-    def rpc_object(self):
-        return ObjectService_pb2.RpcObject(json=self.dump())
+                self._fields[var] = value
+        return self._fields
 
     def field_keywords(self):
         keywords = []
-        for keyword in self._json_object:
+        for keyword in self._fields:
             keywords.append(keyword)
         return keywords
 
-    def get_object(self, field_keyword):
-        if not self._local:
-            session = App_pb2.SessionMessage(uuid=self._session_uuid)
-            field_request = FieldService_pb2.FieldRequest(
-                class_keyword=self.keyword(),
-                uuid=self.uuid(),
-                keyword=field_keyword,
-                session=session,
-            )
-            result = self._field_stub.GetValue(field_request).value
-            return (
-                Object(result, self._session_uuid, self._grpc_channel)
-                if result is not None
-                else None
-            )
-        else:
-            if field_keyword in self._object_cache:
-                return self._object_cache[field_keyword]
-
-            json_string = json.dumps(self._json_object[field_keyword]["value"])
-            if json_string:
-                self._object_cache[field_keyword] = Object(json_string)
-                return self._object_cache[field_keyword]
-            return None
-
-    def get_objects(self, field_keyword):
-        if not self._local:
-            session = App_pb2.SessionMessage(uuid=self._session_uuid)
-            field_request = FieldService_pb2.FieldRequest(
-                class_keyword=self.keyword(),
-                uuid=self.uuid(),
-                keyword=field_keyword,
-                session=session,
-            )
-            result = self._field_stub.GetValue(field_request).value
-            caffa_objects = []
-            json_array = json.loads(result)
-
-            for json_object in json_array:
-                caffa_objects.append(Object(json.dumps(json_object), self._session_uuid, self._grpc_channel))
-            return caffa_objects
-        elif field_keyword in self._json_object:
-            if field_keyword in self._object_cache:
-                cached_data = self._object_cache[field_keyword]
-                if not isinstance(cached_data, list):
-                    return [cached_data]
-                return cached_data
-            cached_data = []
-            for entry in self._json_object[field_keyword]["value"]:
-                json_string = json.dumps(entry)
-                if json_string:
-                    cached_data.append(Object(json_string))
-            self._object_cache[field_keyword] = cached_data
-            return cached_data
-        return []
-
-    def get_primitives(self, field_keyword):
-        result = None
-        if not self._local:
-            session = App_pb2.SessionMessage(uuid=self._session_uuid)
-            field_request = FieldService_pb2.FieldRequest(
-                class_keyword=self.keyword(),
-                uuid=self.uuid(),
-                keyword=field_keyword,
-                session=session,
-            )
-            result = self._field_stub.GetValue(field_request).value
-            return json.loads(result) if result is not None else None
-        elif self._json_object and field_keyword in self._json_object:
-            if "value" in self._json_object[field_keyword]:
-                result = self._json_object[field_keyword]["value"]
-            else:
-                result = self._json_object[field_keyword]
-            return result
-        return None
-
     def get(self, field_keyword):
-        data_type = self.type(field_keyword)
-        Object._log.debug(
-            "Getting data for keyword=%s and data type=%s", field_keyword, data_type
-        )
-        if data_type is not None:
-            if data_type.startswith("object[]"):
-                return self.get_objects(field_keyword)
-            elif data_type.startswith("object"):
-                return self.get_object(field_keyword)
-            else:
-                return self.get_primitives(field_keyword)
-        raise Exception("Field " + field_keyword + " did not exist in object")
-        return None
-
-    def set(self, field_keyword, value, address_offset=0):
-        data_type = self.type(field_keyword)
-        Object._log.debug(
-            "Setting value=%s for keyword=%s and data type=%s",
-            str(value),
-            field_keyword,
-            data_type,
-        )
+        print ("Trying to get field ", field_keyword)
+        value = None
         if not self._local:
-            session = App_pb2.SessionMessage(uuid=self._session_uuid)
+            value = json.loads(self._client.get_field_value(self._fields["uuid"], field_keyword))
+        elif self._fields and field_keyword in self._fields:
+            value = self._fields[field_keyword]
 
-            field_request = FieldService_pb2.FieldRequest(
-                class_keyword=self.keyword(),
-                uuid=self.uuid(),
-                keyword=field_keyword,
-                index=address_offset,
-                session=session,
-            )
-            setter_request = FieldService_pb2.SetterRequest(
-                field=field_request, value=json.dumps(value)
-            )
-            self._field_stub.SetValue(setter_request)
+        if value is None:
+            raise Exception("Field " + field_keyword + " did not exist in object")
+
+        if isinstance(value, dict):
+            keyword = value["keyword"]
+            schema = self._client.schema(keyword)
+            cls = create_class(keyword, schema)
+            value = cls(value, self._client)
+        return value
+
+    def set(self, field_keyword, value):
+        if isinstance(value, Object):
+            value = object.to_json()
+        if not self._local:
+            self._client.set_field_value(self.uuid, field_keyword, value)
         else:
-            self._json_object[field_keyword]["value"] = value
+            self._fields[field_keyword]["value"] = value
 
     def create_field(self, keyword, type, value):
-        self._json_object[keyword] = {"type": type, "value": value}
+        self._fields[keyword] = {"type": type, "value": value}
 
     def set_fields(self, **kwargs):
         for key, value in kwargs.items():
             self.set(key, value)
 
+    def execute(self, object_method, arguments):
+        return self.client().execute(self.uuid, object_method.name(), arguments)
+
     def methods(self):
-        session = App_pb2.SessionMessage(uuid=self._session_uuid)
-        request = ObjectService_pb2.ListMethodsRequest(
-            self_object=self.rpc_object(), session=session
-        )
-
-        rpc_object_list = self._object_stub.ListMethods(request).objects
-        caffa_method_list = []
-        for rpc_object in rpc_object_list:
-            caffa_method_list.append(Method(self, rpc_object.json))
-        return caffa_method_list
-
-    def method(self, keyword):
-        all_methods = self.methods()
-        for single_method in all_methods:
-            if single_method.keyword() == keyword:
-                return single_method
-        return None
-
-    def execute(self, object_method):
-        session = App_pb2.SessionMessage(uuid=self._session_uuid)
-
-        method_request = ObjectService_pb2.MethodRequest(
-            self_object=self.rpc_object(),
-            method=object_method.rpc_object(),
-            session=session
-        )
-        try:
-            result = self._object_stub.ExecuteMethod(method_request)
-        except grpc.RpcError as e:
-            raise RuntimeError(e.details())
-
-        return_json = json.loads(result.json)
-        if "value" in return_json:
-            return return_json["value"]
-        else:
-            return None
+        return self._method_list
 
     def dump(self):
         return json.dumps(self.make_json())
 
+def make_read_lambda(property_name):
+    return lambda self: self.get(property_name)
 
-    def upgrade(self, cls):
-        return cls(self._json_object, self._session_uuid, self._grpc_channel, self._local)
+def make_write_lambda(property_name):
+    return lambda self, value: self.set(property_name, value)
 
-class Document(Object):
-    """The Document class is a top level object acting as a "Project" or container"""
 
-    def __init__(self, json_object="", session_uuid="", grpc_channel=None, local=False):
-        super().__init__(json_object, session_uuid, grpc_channel, local)
+def create_class(name, schema):
+    def __init__(self, json_object="", client=None, local=False):
+        print ("Creating new object of custom class")
+        Object.__init__(self, json_object, client, local)
+  
+    newclass = type(name, (Object,),{"__init__": __init__})
+    
+    if "properties" in schema:
+        for property_name in schema["properties"]:
+            if property_name != "keyword" and property_name != "methods":
+                print("Assigning property:", property_name, "to class", name)
+                setattr(newclass, property_name, property(fget=make_read_lambda(property_name), fset=make_write_lambda(property_name)))
+            elif property_name == "methods":
+                for method_name, method_schema in schema["properties"]["methods"]["properties"].items():
+                    method_schema = method_schema["properties"]
+                    newclass._methods.append(create_method_class(method_name, method_schema))
 
-    @property
-    def id(self):
-        """A unique document ID"""
-
-        return self.get("id")
-
-    @id.setter
-    def id(self, value):
-        return self.set("id", value)
-
-    @property
-    def fileName(self):
-        """The filename of the document if saved to disk"""
-
-        return self.get("fileName")
-
-    @fileName.setter
-    def fileName(self, value):
-        return self.set("fileName", value)
+    return newclass

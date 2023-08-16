@@ -19,43 +19,45 @@
 import json
 import logging
 
-import ObjectService_pb2
-
-class Method(object):
+class Method:
     _log = logging.getLogger("caffa-method")
 
-    def __init__(self, self_object, json_object):
+    def __init__(self, self_object):
         self._self_object = self_object
-        self._json_object = json.loads(json_object)
+        self._arguments = {}
 
-    def keyword(self):
-        return self._json_object["keyword"]
+    def execute(self, *args, **kwargs):
+        arguments = {}
+        if len(kwargs.items()) > 0:
+            arguments["labelledArguments"] = kwargs
+        elif len(args) > 0:
+            arguments["positionalArguments"] = args
+        return self._self_object.execute(self, arguments)
 
-    def return_type(self, field_keyword):
-        return self._json_object["returns"]
-        
-    def rpc_object(self):
-        return ObjectService_pb2.RpcObject(json=self.dump())
+    @classmethod
+    def static_name(cls):
+        return cls.__name__
 
-    def arguments(self):
-        keywords = []
-        for argument in self._json_object["arguments"]:
-            keywords.append(argument["keyword"])
-        return keywords
+    def name(self):
+        return self.__class__.__name__
 
-    def set_argument(self, keyword, value):
-        from .object import Object
-        for argument in self._json_object["arguments"]:
-            if argument["keyword"] == keyword:
-                if isinstance(value, Object):
-                    argument["value"] = value.make_json()
-                else:
-                    argument["value"] = value
+def make_read_lambda(property_name):
+    return lambda self: self_self_object.get(property_name)
 
-    def execute(self, **kwargs):
-        for key, value in kwargs.items():
-            self.set_argument(key, value)
-        self._self_object.execute(self)
+def make_write_lambda(property_name):
+    return lambda self, value: self.set(property_name, value)
 
-    def dump(self):
-        return json.dumps(self._json_object)
+def create_method_class(name, schema):
+    def __init__(self, self_object):
+        print ("Creating new method of type", self.__class__.__name__)
+        return Method.__init__(self, self_object)
+    
+    newclass = type(name, (Method,),{"__init__": __init__})
+    
+    print("Method schema: ", schema)
+    if "labelledArguments" in schema:
+        for property_name in schema["labelledArguments"]["properties"]:
+            print("Assigning property:", property_name, "to method", name)
+            setattr(newclass, property_name, None)
+
+    return newclass
