@@ -28,3 +28,13 @@ def test_app_info():
     log.info("App info: %s", app_string)
 
     client.cleanup()
+
+def test_schemas():
+    try:
+        client = caffa.Client("localhost")
+        assert client is not None
+        schemas = client.schema_list()
+        print("ALL SCHEMAS: ", schemas)
+    except Exception as e:
+        pytest.fail("Failed with exception {0}".format(e))
+    client.cleanup()

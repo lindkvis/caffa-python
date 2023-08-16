@@ -9,7 +9,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="caffa-lindkvis",
-    version="0.0.1",
+    version="0.99.1",
     author="Gaute Lindkvist",
     author_email="lindkvis@gmail.com",
     description="Python bindings for caffa",

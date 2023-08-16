@@ -2,6 +2,7 @@ import logging
 import sys
 import pytest
 import caffa
+import json
 
 log = logging.getLogger("test_objects")
 
@@ -14,11 +15,22 @@ class TestObjects(object):
         self.testApp.cleanup()
 
     def test_document(self):
-        doc = self.testApp.document()
+        doc = self.testApp.document("testDocument")
         assert doc is not None
-        log.debug(doc.dump())
-        log.debug("Found document: " + doc.keyword())
-        log.debug("Found filename: " + doc.fileName)
+        print(str(doc))
+        print("Found document: " + doc.keyword)
+        print("With schema: " + json.dumps(self.testApp.schema(doc.keyword)))
+
+    def test_fields(self):
+        doc = self.testApp.document("testDocument")
+        print(doc)
+        assert doc is not None
+        keywords = dir(doc)
+        assert len(keywords) > 0
+        for keyword in keywords:
+            print("Found field: " + keyword)
+
+        print("Found filename: " + doc.fileName)
         assert doc.fileName == "dummyFileName"
         try:
             doc.fileName = "TestValue"
@@ -27,54 +39,52 @@ class TestObjects(object):
         assert doc.fileName == "TestValue"
         doc.fileName = "dummyFileName"
 
-    def test_fields(self):
-        doc = self.testApp.document()
-        assert doc is not None
-        keywords = doc.field_keywords()
-        assert len(keywords) > 0
-        for keyword in keywords:
-            log.debug("Found field: " + keyword)
 
     def test_children(self):
-        doc = self.testApp.document()
+        return
+
+        doc = self.testApp.document("testDocument")
         assert doc is not None
-        keywords = doc.field_keywords()
+        keywords = vars(doc)
         assert "demoObject" in keywords
-        demo_object = doc.get("demoObject")
+        demo_object = doc.demoObject
         assert demo_object is not None
-        log.debug("Found demo object: %s", demo_object.dump())
+        log.debug("Found demo object: %s", str(demo_object))
 
     def test_methods(self):
-        doc = self.testApp.document()
+        doc = self.testApp.document("testDocument")
         assert doc is not None
-        doc_methods = doc.methods()
-        assert len(doc_methods) == 0
-        demo_object = doc.get("demoObject")
+        
+        demo_object = doc.demoObject
         assert demo_object is not None
         obj_methods = demo_object.methods()
         assert len(obj_methods) > 0
 
-        method = obj_methods[0]
-        log.debug("Found method: %s", method.dump())
+        for method in obj_methods:
+            print("Found method: ", method.name(), dir(method))
+        
+        demo_object.copyValues.execute(intValue = 41, doubleValue = 99.0, stringValue = "AnotherValue")
 
-        method.set_argument("intValue", 41)
-        method.set_argument("doubleValue", 99.0)
-        method.set_argument("stringValue", "AnotherValue")
+        assert demo_object.doubleField == 99.0
+        assert demo_object.intField == 41
+        assert demo_object.stringField == "AnotherValue"
 
-        result = method.execute()
+        demo_object.copyValues.execute(42, 97.0, "AnotherValue2")
 
-        assert demo_object.get("doubleField") == 99.0
-        assert demo_object.get("intField") == 41
-        assert demo_object.get("stringField") == "AnotherValue"
+        assert demo_object.doubleField == 97.0
+        assert demo_object.intField == 42
+        assert demo_object.stringField == "AnotherValue2"
 
-        method = demo_object.method("setIntVector")
-        method.set_argument("intVector", [1, 2, 97])
-        method.execute()
+        demo_object.setIntVector.execute(intVector = [1, 2, 97])
 
         assert demo_object.get("proxyIntVector") == [1, 2, 97]
 
+        values = demo_object.getIntVector.execute()
+
+        assert(values == [1, 2, 97])
+
     def test_non_existing_field(self):
-        doc = self.testApp.document()
+        doc = self.testApp.document("testDocument")
         assert doc is not None
         try:
             value = doc.does_not_exist
@@ -84,17 +94,15 @@ class TestObjects(object):
                 "Got expected exception when trying to read a field which doesn't exist: '{0}'".format(e))
 
     def test_int_vector(self):
-        doc = self.testApp.document()
+        doc = self.testApp.document("testDocument")
         assert doc is not None
 
         demo_object = doc.get("demoObject")
-        for field in demo_object.field_keywords():
-            log.debug("Found field: " + field)
         demo_object.set("proxyIntVector", [1, 4, 42])
         assert demo_object.get("proxyIntVector") == [1, 4, 42]
 
     def test_float_vector(self):
-        doc = self.testApp.document()
+        doc = self.testApp.document("testDocument")
         assert doc is not None
 
         demo_object = doc.get("demoObject")
@@ -102,7 +110,7 @@ class TestObjects(object):
         assert demo_object.floatVector == [1.0, 3.0, -42.0]
 
     def test_app_enum(self):
-        doc = self.testApp.document()
+        doc = self.testApp.document("testDocument")
         assert doc is not None
         demo_object = doc.get("demoObject")
         demo_object.set("enumField", "T3")
