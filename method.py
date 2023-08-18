@@ -21,17 +21,22 @@ import logging
 
 class Method:
     _log = logging.getLogger("caffa-method")
+    _labelled_arguments = {}
+    _positional_arguments = []
 
     def __init__(self, self_object):
         self._self_object = self_object
-        self._arguments = {}
 
-    def execute(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs):
         arguments = {}
         if len(kwargs.items()) > 0:
-            arguments["labelledArguments"] = kwargs
+            arguments["labelledArguments"] = __class__._labelled_arguments
+            for key, value in kwargs.items():
+                arguments["labelledArguments"][key] = value
         elif len(args) > 0:
-            arguments["positionalArguments"] = args
+            arguments["positionalArguments"] = __class__._positional_arguments
+            for i, value in enumerate(args):
+                arguments["positionalArguments"][i] = value
         return self._self_object.execute(self, arguments)
 
     @classmethod
@@ -49,15 +54,15 @@ def make_write_lambda(property_name):
 
 def create_method_class(name, schema):
     def __init__(self, self_object):
-        print ("Creating new method of type", self.__class__.__name__)
         return Method.__init__(self, self_object)
     
     newclass = type(name, (Method,),{"__init__": __init__})
     
-    print("Method schema: ", schema)
     if "labelledArguments" in schema:
-        for property_name in schema["labelledArguments"]["properties"]:
-            print("Assigning property:", property_name, "to method", name)
-            setattr(newclass, property_name, None)
+        for argument_name in schema["labelledArguments"]["properties"]:
+            newclass._labelled_arguments[argument_name] = None
+    if "positionalArguments" in schema:
+        for i, entry in enumerate(schema["positionalArguments"]["items"]):
+            newclass._positional_arguments.append(None)
 
     return newclass

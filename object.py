@@ -32,7 +32,6 @@ class Object(object):
         else:
             self._fields = json.loads(json_object)
 
-        self._object_cache = {}
         self._client = client
         self._local = local
 
@@ -46,6 +45,10 @@ class Object(object):
             self._method_list.append(method_instance)
     
 
+    @classmethod
+    def create_local(cls, **kwargs):
+        return cls(json_object=kwargs, client=None, local=True)
+
     @property
     def keyword(self):
         return self._fields["keyword"]
@@ -53,18 +56,17 @@ class Object(object):
     def client(self):
         return self._client
 
-    def to_json(self):
-        if self._object_cache:
-            for key, object in self._object_cache.items():
-                self._fields[key] = object.make_json()
+    def to_dict(self):
+        content = {}
+        for key in self._fields:
+            value = self.get(key)
+            if isinstance(value, Object):
+                value = value.to_dict()
+            content[key] = value
+        return content
 
-        for var in vars(self):
-            if not var.startswith("_"):
-                value = getattr(self, var)
-                if isinstance(value, Object):
-                    value = value.make_json()    
-                self._fields[var] = value
-        return self._fields
+    def to_json(self):
+        return json.dumps(self.to_dict())
 
     def field_keywords(self):
         keywords = []
@@ -73,7 +75,6 @@ class Object(object):
         return keywords
 
     def get(self, field_keyword):
-        print ("Trying to get field ", field_keyword)
         value = None
         if not self._local:
             value = json.loads(self._client.get_field_value(self._fields["uuid"], field_keyword))
@@ -112,7 +113,7 @@ class Object(object):
         return self._method_list
 
     def dump(self):
-        return json.dumps(self.make_json())
+        return json.dumps(self.to_json())
 
 def make_read_lambda(property_name):
     return lambda self: self.get(property_name)
@@ -122,8 +123,7 @@ def make_write_lambda(property_name):
 
 
 def create_class(name, schema):
-    def __init__(self, json_object="", client=None, local=False):
-        print ("Creating new object of custom class")
+    def __init__(self, json_object="", client=None, local=False):        
         Object.__init__(self, json_object, client, local)
   
     newclass = type(name, (Object,),{"__init__": __init__})
@@ -131,7 +131,6 @@ def create_class(name, schema):
     if "properties" in schema:
         for property_name in schema["properties"]:
             if property_name != "keyword" and property_name != "methods":
-                print("Assigning property:", property_name, "to class", name)
                 setattr(newclass, property_name, property(fget=make_read_lambda(property_name), fset=make_write_lambda(property_name)))
             elif property_name == "methods":
                 for method_name, method_schema in schema["properties"]["methods"]["properties"].items():
