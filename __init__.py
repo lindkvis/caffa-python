@@ -12,5 +12,5 @@ caffa_dir = os.path.dirname(__file__)
 os.chdir(current_dir)
 
 from .client import Client, SessionType
-from .object import Object
+from .object import Object, create_class, create_method_class
 from .method import Method
