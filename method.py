@@ -22,7 +22,7 @@ import logging
 class Method:
     _log = logging.getLogger("caffa-method")
     _labelled_arguments = {}
-    _positional_arguments = []
+    _positional_arguments = {}
 
     def __init__(self, self_object):
         self._self_object = self_object
@@ -30,13 +30,14 @@ class Method:
     def __call__(self, *args, **kwargs):
         arguments = {}
         if len(kwargs.items()) > 0:
-            arguments["labelledArguments"] = __class__._labelled_arguments
+            arguments["labelledArguments"] = self.__class__._labelled_arguments[self.__class__.__name__]
             for key, value in kwargs.items():
                 arguments["labelledArguments"][key] = value
         elif len(args) > 0:
-            arguments["positionalArguments"] = __class__._positional_arguments
+            arguments["positionalArguments"] = self.__class__._positional_arguments[self.__class__.__name__]
             for i, value in enumerate(args):
                 arguments["positionalArguments"][i] = value
+
         return self._self_object.execute(self, arguments)
 
     @classmethod
@@ -57,12 +58,14 @@ def create_method_class(name, schema):
         return Method.__init__(self, self_object)
     
     newclass = type(name, (Method,),{"__init__": __init__})
-    
+    print(newclass)
+    newclass._labelled_arguments[name] = {}
+    newclass._positional_arguments[name] = []
     if "labelledArguments" in schema:
         for argument_name in schema["labelledArguments"]["properties"]:
-            newclass._labelled_arguments[argument_name] = None
+            newclass._labelled_arguments[name][argument_name] = None
     if "positionalArguments" in schema:
         for i, entry in enumerate(schema["positionalArguments"]["items"]):
-            newclass._positional_arguments.append(None)
+            newclass._positional_arguments[name].append(None)
 
     return newclass

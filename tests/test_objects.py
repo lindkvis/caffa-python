@@ -63,23 +63,23 @@ class TestObjects(object):
         for method in obj_methods:
             print("Found method: ", method.name(), dir(method))
         
-        demo_object.copyValues.execute(intValue = 41, doubleValue = 99.0, stringValue = "AnotherValue")
+        demo_object.copyValues(intValue = 41, doubleValue = 99.0, stringValue = "AnotherValue")
 
         assert demo_object.doubleField == 99.0
         assert demo_object.intField == 41
         assert demo_object.stringField == "AnotherValue"
 
-        demo_object.copyValues.execute(42, 97.0, "AnotherValue2")
+        demo_object.copyValues(42, 97.0, "AnotherValue2")
 
         assert demo_object.doubleField == 97.0
         assert demo_object.intField == 42
         assert demo_object.stringField == "AnotherValue2"
 
-        demo_object.setIntVector.execute(intVector = [1, 2, 97])
+        demo_object.setIntVector(intVector = [1, 2, 97])
 
         assert demo_object.get("proxyIntVector") == [1, 2, 97]
 
-        values = demo_object.getIntVector.execute()
+        values = demo_object.getIntVector()
 
         assert(values == [1, 2, 97])
 
