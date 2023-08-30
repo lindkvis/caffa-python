@@ -41,10 +41,12 @@ class SessionType(IntEnum):
 
 
 class Client:
-    def __init__(self, hostname, port=50000, min_app_version=MIN_APP_VERSION, max_app_version=MAX_APP_VERSION, session_type=SessionType.REGULAR):
+    def __init__(self, hostname, port=50000, username="", password="", min_app_version=MIN_APP_VERSION, max_app_version=MAX_APP_VERSION, session_type=SessionType.REGULAR):
         self.hostname = hostname
         self.port = port
-        self.log = logging.getLogger("grpc-logger")
+        self.basic_auth = requests.auth.HTTPBasicAuth(username, password)
+
+        self.log = logging.getLogger("rpc-logger")
         self.mutex = threading.Lock()
 
         self.check_version(min_app_version, max_app_version)
@@ -72,7 +74,7 @@ class Client:
     def _perform_get_request(self, path, params = ""):
         url = self._build_url(path, params)
         try:
-            response = requests.get(url)
+            response = requests.get(url, auth=self.basic_auth)
             response.raise_for_status()
             return response.text
         except requests.exceptions.HTTPError as e:
@@ -84,7 +86,7 @@ class Client:
     def _perform_delete_request(self, path, params):
         url = self._build_url(path, params)
         try:
-            response = requests.delete(url)
+            response = requests.delete(url, auth=self.basic_auth)
             response.raise_for_status()
             return response.text
         except requests.exceptions.RequestException as e:
@@ -94,7 +96,7 @@ class Client:
     def _perform_put_request(self, path, params="", body=""):
         url = self._build_url(path, params)
         try:
-            response = requests.put(url, json=body)
+            response = requests.put(url, json=body, auth=self.basic_auth)
             response.raise_for_status()
             return response.text
         except requests.exceptions.RequestException as e:

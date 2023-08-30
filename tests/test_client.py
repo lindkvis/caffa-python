@@ -8,7 +8,7 @@ log = logging.getLogger("test_client")
 
 def test_connection():
     try:
-        client = caffa.Client("localhost")
+        client = caffa.Client("localhost", username="test", password="password")
         assert client is not None
         log.info("Client connection worked")
     except Exception as e:
@@ -17,7 +17,7 @@ def test_connection():
 
 
 def test_app_info():
-    client = caffa.Client("localhost")
+    client = caffa.Client("localhost", username="test", password="password")
     assert client is not None
     log.info("Client connection worked")
     app_info = client.app_info()
@@ -31,7 +31,7 @@ def test_app_info():
 
 def test_schemas():
     try:
-        client = caffa.Client("localhost")
+        client = caffa.Client("localhost", username="test", password="password")
         assert client is not None
         schemas = client.schema_list()
         print("ALL SCHEMAS: ", schemas)
