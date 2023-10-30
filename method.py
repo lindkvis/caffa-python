@@ -58,7 +58,6 @@ def create_method_class(name, schema):
         return Method.__init__(self, self_object)
     
     newclass = type(name, (Method,),{"__init__": __init__})
-    print(newclass)
     newclass._labelled_arguments[name] = {}
     newclass._positional_arguments[name] = []
     if "labelledArguments" in schema:
