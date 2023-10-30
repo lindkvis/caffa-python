@@ -46,7 +46,7 @@ class Object(object):
     
 
     @classmethod
-    def create_local(cls, **kwargs):
+    def create(cls, **kwargs):
         return cls(json_object=kwargs, client=None, local=True)
 
     @property
