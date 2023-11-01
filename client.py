@@ -78,7 +78,7 @@ class Client:
             response.raise_for_status()
             return response.text
         except requests.exceptions.HTTPError as e:
-            self.log.error("Failed GET request with error ", response.text)
+            self.log.error("Failed GET request with error " + e.response.text)
         except requests.exceptions.RequestException as e:
             self.log.error("Failed GET request with error ", e)
             return ""
@@ -89,6 +89,8 @@ class Client:
             response = requests.delete(url, auth=self.basic_auth)
             response.raise_for_status()
             return response.text
+        except requests.exceptions.HTTPError as e:
+            self.log.error("Failed DELETE request with error " + e.response.text)
         except requests.exceptions.RequestException as e:
             self.log.error("Failed DELETE request with error ", e)
             return ""
@@ -99,6 +101,8 @@ class Client:
             response = requests.put(url, json=body, auth=self.basic_auth)
             response.raise_for_status()
             return response.text
+        except requests.exceptions.HTTPError as e:
+            self.log.error("Failed PUT request with error " + e.response.text)
         except requests.exceptions.RequestException as e:
             self.log.error("Failed PUT request with error ", e)
             return ""        
