@@ -34,13 +34,13 @@ class Method:
             arguments["labelledArguments"] = self.__class__._labelled_arguments[self.__class__.__name__]
             for key, value in kwargs.items():
                 if isinstance(value, Object):
-                    value = value.to_json()
+                    value = value.to_dict()
                 arguments["labelledArguments"][key] = value
         elif len(args) > 0:
             arguments["positionalArguments"] = self.__class__._positional_arguments[self.__class__.__name__]
             for i, value in enumerate(args):
-                if isinstance(value, Object):
-                    value = value.to_json()
+                if isinstance(value, object.Object):
+                    value = value.to_dict()
                 arguments["positionalArguments"][i] = value
 
         return self._self_object.execute(self, arguments)
