@@ -39,7 +39,7 @@ class Method:
         elif len(args) > 0:
             arguments["positionalArguments"] = self.__class__._positional_arguments[self.__class__.__name__]
             for i, value in enumerate(args):
-                if isinstance(value, object.Object):
+                if isinstance(value, Object):
                     value = value.to_dict()
                 arguments["positionalArguments"][i] = value
 
