@@ -79,9 +79,10 @@ class Client:
             return response.text
         except requests.exceptions.HTTPError as e:
             self.log.error("Failed GET request with error " + e.response.text)
+            raise e
         except requests.exceptions.RequestException as e:
             self.log.error("Failed GET request with error ", e)
-            return ""
+            raise e
     
     def _perform_delete_request(self, path, params):
         url = self._build_url(path, params)
@@ -91,21 +92,24 @@ class Client:
             return response.text
         except requests.exceptions.HTTPError as e:
             self.log.error("Failed DELETE request with error " + e.response.text)
+            raise e
         except requests.exceptions.RequestException as e:
             self.log.error("Failed DELETE request with error ", e)
-            return ""
+            raise e
 
     def _perform_put_request(self, path, params="", body=""):
         url = self._build_url(path, params)
         try:
             response = requests.put(url, json=body, auth=self.basic_auth)
+            print("GOT RESPONSE: ", response.status_code, response.text)
             response.raise_for_status()
             return response.text
         except requests.exceptions.HTTPError as e:
             self.log.error("Failed PUT request with error " + e.response.text)
+            raise e
         except requests.exceptions.RequestException as e:
             self.log.error("Failed PUT request with error ", e)
-            return ""        
+            raise e
 
     def _json_text_to_object(self, text):
         return json.loads(text, object_hook=lambda d: SimpleNamespace(**d))
