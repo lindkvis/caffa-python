@@ -81,9 +81,6 @@ class Object(object):
         elif self._fields and field_keyword in self._fields:
             value = self._fields[field_keyword]
 
-        if value is None:
-            raise Exception("Field " + field_keyword + " did not exist in object")
-
         if isinstance(value, dict):
             keyword = value["keyword"]
             schema = self._client.schema(keyword)
