@@ -101,7 +101,6 @@ class Client:
         url = self._build_url(path, params)
         try:
             response = requests.put(url, json=body, auth=self.basic_auth)
-            print("GOT RESPONSE: ", response.status_code, response.text)
             response.raise_for_status()
             return response.text
         except requests.exceptions.HTTPError as e:
