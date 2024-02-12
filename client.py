@@ -41,6 +41,8 @@ class SessionType(IntEnum):
 
 
 class Client:
+    number_of_attempts = 1
+
     def __init__(self, hostname, port=50000, username="", password="", min_app_version=MIN_APP_VERSION, max_app_version=MAX_APP_VERSION, session_type=SessionType.REGULAR):
         self.hostname = hostname
         self.port = port
@@ -49,7 +51,16 @@ class Client:
         self.log = logging.getLogger("rpc-logger")
         self.mutex = threading.Lock()
 
-        self.check_version(min_app_version, max_app_version)
+        for i in range(0, Client.number_of_attempts):
+            try:
+                self.check_version(min_app_version, max_app_version)
+                break
+            except Exception as e:
+                if i == Client.number_of_attempts - 1:
+                    raise e from None
+                else:
+                    self.log.warning("Connection attempt %d/%d failed. Trying again in 0.5s", i, Client.number_of_attempts)
+                    time.sleep(1)
 
         self.session_uuid = self.create_session(session_type)
 
@@ -78,11 +89,9 @@ class Client:
             response.raise_for_status()
             return response.text
         except requests.exceptions.HTTPError as e:
-            self.log.error("Failed GET request with error " + e.response.text)
-            raise e
+            raise RuntimeError("Failed GET request with error %s" % e.response.text) from None
         except requests.exceptions.RequestException as e:
-            self.log.error("Failed GET request with error ", e)
-            raise e
+            raise RuntimeError("Failed GET request with error %s" % e) from None
     
     def _perform_delete_request(self, path, params):
         url = self._build_url(path, params)
@@ -91,11 +100,9 @@ class Client:
             response.raise_for_status()
             return response.text
         except requests.exceptions.HTTPError as e:
-            self.log.error("Failed DELETE request with error " + e.response.text)
-            raise e
-        except requests.exceptions.RequestException as e:
-            self.log.error("Failed DELETE request with error ", e)
-            raise e
+            raise RuntimeError("Failed DELETE request with error %s" % e.response.text) from None
+        except Exception as e:
+            raise RuntimeError("Failed DELETE request with error %s" % e) from None
 
     def _perform_put_request(self, path, params="", body=""):
         url = self._build_url(path, params)
@@ -104,11 +111,9 @@ class Client:
             response.raise_for_status()
             return response.text
         except requests.exceptions.HTTPError as e:
-            self.log.error("Failed PUT request with error " + e.response.text)
-            raise e
-        except requests.exceptions.RequestException as e:
-            self.log.error("Failed PUT request with error ", e)
-            raise e
+            raise RuntimeError("Failed PUT request with error %s" % e.response.text) from None
+        except Exception as e:
+            raise RuntimeError("Failed PUT request with error %s" % e) from None
 
     def _json_text_to_object(self, text):
         return json.loads(text, object_hook=lambda d: SimpleNamespace(**d))
