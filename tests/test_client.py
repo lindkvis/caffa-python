@@ -23,11 +23,19 @@ def test_app_info():
     app_info = client.app_info()
     assert app_info is not None
     assert app_info.name != ""
-    app_string = app_info.name + " v" + str(app_info.major_version) + \
-        "." + str(app_info.minor_version) + "." + str(app_info.patch_version)
+    app_string = (
+        app_info.name
+        + " v"
+        + str(app_info.major_version)
+        + "."
+        + str(app_info.minor_version)
+        + "."
+        + str(app_info.patch_version)
+    )
     log.info("App info: %s", app_string)
 
     client.cleanup()
+
 
 def test_schemas():
     try:

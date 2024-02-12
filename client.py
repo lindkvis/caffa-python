@@ -34,16 +34,26 @@ from types import SimpleNamespace
 MIN_APP_VERSION = (1, 2, 0)
 MAX_APP_VERSION = (1, 2, 99)
 
+
 class SessionType(IntEnum):
-    INVALID   = 0
-    REGULAR   = 1
+    INVALID = 0
+    REGULAR = 1
     OBSERVING = 2
 
 
 class Client:
     number_of_attempts = 1
 
-    def __init__(self, hostname, port=50000, username="", password="", min_app_version=MIN_APP_VERSION, max_app_version=MAX_APP_VERSION, session_type=SessionType.REGULAR):
+    def __init__(
+        self,
+        hostname,
+        port=50000,
+        username="",
+        password="",
+        min_app_version=MIN_APP_VERSION,
+        max_app_version=MAX_APP_VERSION,
+        session_type=SessionType.REGULAR,
+    ):
         self.hostname = hostname
         self.port = port
         self.basic_auth = requests.auth.HTTPBasicAuth(username, password)
@@ -59,7 +69,11 @@ class Client:
                 if i == Client.number_of_attempts - 1:
                     raise e from None
                 else:
-                    self.log.warning("Connection attempt %d/%d failed. Trying again in 0.5s", i, Client.number_of_attempts)
+                    self.log.warning(
+                        "Connection attempt %d/%d failed. Trying again in 0.5s",
+                        i,
+                        Client.number_of_attempts,
+                    )
                     time.sleep(1)
 
         self.session_uuid = self.create_session(session_type)
@@ -71,7 +85,7 @@ class Client:
         self.keepalive_thread = threading.Thread(target=self.send_keepalives)
         self.keepalive_thread.start()
 
-    def _build_url(self, path, params = ""):
+    def _build_url(self, path, params=""):
         url = "http://" + self.hostname + ":" + str(self.port) + path
         if hasattr(self, "session_uuid"):
             url += "?session_uuid=" + self.session_uuid
@@ -82,17 +96,19 @@ class Client:
                 url += "?" + params
         return url
 
-    def _perform_get_request(self, path, params = ""):
+    def _perform_get_request(self, path, params=""):
         url = self._build_url(path, params)
         try:
             response = requests.get(url, auth=self.basic_auth)
             response.raise_for_status()
             return response.text
         except requests.exceptions.HTTPError as e:
-            raise RuntimeError("Failed GET request with error %s" % e.response.text) from None
+            raise RuntimeError(
+                "Failed GET request with error %s" % e.response.text
+            ) from None
         except requests.exceptions.RequestException as e:
             raise RuntimeError("Failed GET request with error %s" % e) from None
-    
+
     def _perform_delete_request(self, path, params):
         url = self._build_url(path, params)
         try:
@@ -100,7 +116,9 @@ class Client:
             response.raise_for_status()
             return response.text
         except requests.exceptions.HTTPError as e:
-            raise RuntimeError("Failed DELETE request with error %s" % e.response.text) from None
+            raise RuntimeError(
+                "Failed DELETE request with error %s" % e.response.text
+            ) from None
         except Exception as e:
             raise RuntimeError("Failed DELETE request with error %s" % e) from None
 
@@ -111,7 +129,9 @@ class Client:
             response.raise_for_status()
             return response.text
         except requests.exceptions.HTTPError as e:
-            raise RuntimeError("Failed PUT request with error %s" % e.response.text) from None
+            raise RuntimeError(
+                "Failed PUT request with error %s" % e.response.text
+            ) from None
         except Exception as e:
             raise RuntimeError("Failed PUT request with error %s" % e) from None
 
@@ -127,7 +147,11 @@ class Client:
         return schema
 
     def execute(self, object_uuid, method_name, arguments):
-        value = json.loads(self._perform_put_request(path="/uuid/" + object_uuid + "/" + method_name, body=arguments))
+        value = json.loads(
+            self._perform_put_request(
+                path="/uuid/" + object_uuid + "/" + method_name, body=arguments
+            )
+        )
         if isinstance(value, dict):
             if "keyword" in value:
                 keyword = value["keyword"]
@@ -140,7 +164,11 @@ class Client:
         return self._json_text_to_object(self._perform_get_request("/app/info"))
 
     def create_session(self, session_type):
-        response = self._json_text_to_object(self._perform_put_request(path="/session/create?type="+str(int(session_type))))
+        response = self._json_text_to_object(
+            self._perform_put_request(
+                path="/session/create?type=" + str(int(session_type))
+            )
+        )
         return response.session_uuid
 
     def cleanup(self):
@@ -148,7 +176,9 @@ class Client:
             self.mutex.acquire()
             self.keep_alive = False
             if self.session_uuid:
-                self._perform_delete_request("/session/destroy?session_uuid=" + self.session_uuid, "")
+                self._perform_delete_request(
+                    "/session/destroy?session_uuid=" + self.session_uuid, ""
+                )
         finally:
             self.mutex.release()
 
@@ -161,7 +191,7 @@ class Client:
             try:
                 self.mutex.acquire()
                 if not self.keep_alive:
-                    break;
+                    break
                 else:
                     self.send_keepalive()
             finally:
@@ -176,12 +206,14 @@ class Client:
         cls = object.create_class(keyword, schema)
 
         return cls(json_text, self, False)
-    
+
     def get_field_value(self, object_uuid, field_name):
         return self._perform_get_request("/uuid/" + object_uuid + "/" + field_name)
 
     def set_field_value(self, object_uuid, field_name, json_value):
-        return self._perform_put_request(path="/uuid/" + object_uuid + "/" + field_name, body=json_value)
+        return self._perform_put_request(
+            path="/uuid/" + object_uuid + "/" + field_name, body=json_value
+        )
 
     def check_version(self, min_app_version, max_app_version):
         app_info = self.app_info()
@@ -203,12 +235,13 @@ class Client:
         ) < min_app_version:
             raise RuntimeError(
                 "App Version {}.{}.{} is too old. The minimum required is {}.{}.{}".format(
-                app_info.major_version,
-                app_info.minor_version,
-                app_info.patch_version,
-                min_app_version[0],
-                min_app_version[1],
-                min_app_version[2])
+                    app_info.major_version,
+                    app_info.minor_version,
+                    app_info.patch_version,
+                    min_app_version[0],
+                    min_app_version[1],
+                    min_app_version[2],
+                )
             )
         if (
             app_info.major_version,
@@ -217,12 +250,13 @@ class Client:
         ) > max_app_version:
             raise RuntimeError(
                 "App Version {}.{}.{} is too new. The maximum required is {}.{}.{}".format(
-                app_info.major_version,
-                app_info.minor_version,
-                app_info.patch_version,
-                max_app_version[0],
-                max_app_version[1],
-                max_app_version[2])
+                    app_info.major_version,
+                    app_info.minor_version,
+                    app_info.patch_version,
+                    max_app_version[0],
+                    max_app_version[1],
+                    max_app_version[2],
+                )
             )
 
         return True

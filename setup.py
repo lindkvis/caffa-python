@@ -28,4 +28,3 @@ setuptools.setup(
     packages=setuptools.find_packages(where="."),
     python_requires=">=3.6",
 )
-

@@ -9,7 +9,9 @@ log = logging.getLogger("test_objects")
 
 class TestObjects(object):
     def setup_method(self, method):
-        self.testApp = caffa.Client("localhost", 50000, username="test", password="password")
+        self.testApp = caffa.Client(
+            "localhost", 50000, username="test", password="password"
+        )
 
     def teardown_method(self, method):
         self.testApp.cleanup()
@@ -39,7 +41,6 @@ class TestObjects(object):
         assert doc.fileName == "TestValue"
         doc.fileName = "dummyFileName"
 
-
     def test_children(self):
         return
 
@@ -54,7 +55,7 @@ class TestObjects(object):
     def test_methods(self):
         doc = self.testApp.document("testDocument")
         assert doc is not None
-        
+
         demo_object = doc.demoObject
         assert demo_object is not None
         obj_methods = demo_object.methods()
@@ -62,8 +63,10 @@ class TestObjects(object):
 
         for method in obj_methods:
             print("Found method: ", method.name(), dir(method))
-        
-        demo_object.copyValues(intValue = 41, doubleValue = 99.0, stringValue = "AnotherValue")
+
+        demo_object.copyValues(
+            intValue=41, doubleValue=99.0, stringValue="AnotherValue"
+        )
 
         assert demo_object.doubleField == 99.0
         assert demo_object.intField == 41
@@ -75,13 +78,13 @@ class TestObjects(object):
         assert demo_object.intField == 42
         assert demo_object.stringField == "AnotherValue2"
 
-        demo_object.setIntVector(intVector = [1, 2, 97])
+        demo_object.setIntVector(intVector=[1, 2, 97])
 
         assert demo_object.get("proxyIntVector") == [1, 2, 97]
 
         values = demo_object.getIntVector()
 
-        assert(values == [1, 2, 97])
+        assert values == [1, 2, 97]
 
     def test_non_existing_field(self):
         doc = self.testApp.document("testDocument")
@@ -91,7 +94,10 @@ class TestObjects(object):
             pytest.fail("Should have had exception, but got none!")
         except Exception as e:
             log.info(
-                "Got expected exception when trying to read a field which doesn't exist: '{0}'".format(e))
+                "Got expected exception when trying to read a field which doesn't exist: '{0}'".format(
+                    e
+                )
+            )
 
     def test_int_vector(self):
         doc = self.testApp.document("testDocument")
@@ -122,4 +128,7 @@ class TestObjects(object):
 
         except Exception as e:
             log.info(
-                "Got expected exception when trying to assign an invalid enum value: '0'".format(e))
+                "Got expected exception when trying to assign an invalid enum value: '0'".format(
+                    e
+                )
+            )

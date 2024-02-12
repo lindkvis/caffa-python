@@ -21,6 +21,7 @@ import logging
 
 from .method import Method, create_method_class
 
+
 class Object(object):
     _log = logging.getLogger("caffa-object")
 
@@ -40,10 +41,9 @@ class Object(object):
 
         self._method_list = []
         for method in self.__class__._methods:
-            method_instance = method(self_object = self)
+            method_instance = method(self_object=self)
             setattr(self, method.static_name(), method_instance)
             self._method_list.append(method_instance)
-    
 
     @classmethod
     def create(cls, **kwargs):
@@ -77,7 +77,9 @@ class Object(object):
     def get(self, field_keyword):
         value = None
         if not self._local:
-            value = json.loads(self._client.get_field_value(self._fields["uuid"], field_keyword))
+            value = json.loads(
+                self._client.get_field_value(self._fields["uuid"], field_keyword)
+            )
         elif self._fields and field_keyword in self._fields:
             value = self._fields[field_keyword]
 
@@ -112,26 +114,39 @@ class Object(object):
     def dump(self):
         return json.dumps(self.to_json())
 
+
 def make_read_lambda(property_name):
     return lambda self: self.get(property_name)
+
 
 def make_write_lambda(property_name):
     return lambda self, value: self.set(property_name, value)
 
 
 def create_class(name, schema):
-    def __init__(self, json_object="", client=None, local=False):        
+    def __init__(self, json_object="", client=None, local=False):
         Object.__init__(self, json_object, client, local)
-  
-    newclass = type(name, (Object,),{"__init__": __init__})
-    
+
+    newclass = type(name, (Object,), {"__init__": __init__})
+
     if "properties" in schema:
         for property_name in schema["properties"]:
             if property_name != "keyword" and property_name != "methods":
-                setattr(newclass, property_name, property(fget=make_read_lambda(property_name), fset=make_write_lambda(property_name)))
+                setattr(
+                    newclass,
+                    property_name,
+                    property(
+                        fget=make_read_lambda(property_name),
+                        fset=make_write_lambda(property_name),
+                    ),
+                )
             elif property_name == "methods":
-                for method_name, method_schema in schema["properties"]["methods"]["properties"].items():
+                for method_name, method_schema in schema["properties"]["methods"][
+                    "properties"
+                ].items():
                     method_schema = method_schema["properties"]
-                    newclass._methods.append(create_method_class(method_name, method_schema))
+                    newclass._methods.append(
+                        create_method_class(method_name, method_schema)
+                    )
 
     return newclass

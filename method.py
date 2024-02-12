@@ -19,6 +19,7 @@
 import json
 import logging
 
+
 class Method:
     _log = logging.getLogger("caffa-method")
     _labelled_arguments = {}
@@ -29,15 +30,20 @@ class Method:
 
     def __call__(self, *args, **kwargs):
         from .object import Object
+
         arguments = {}
         if len(kwargs.items()) > 0:
-            arguments["labelledArguments"] = self.__class__._labelled_arguments[self.__class__.__name__]
+            arguments["labelledArguments"] = self.__class__._labelled_arguments[
+                self.__class__.__name__
+            ]
             for key, value in kwargs.items():
                 if isinstance(value, Object):
                     value = value.to_dict()
                 arguments["labelledArguments"][key] = value
         elif len(args) > 0:
-            arguments["positionalArguments"] = self.__class__._positional_arguments[self.__class__.__name__]
+            arguments["positionalArguments"] = self.__class__._positional_arguments[
+                self.__class__.__name__
+            ]
             for i, value in enumerate(args):
                 if isinstance(value, Object):
                     value = value.to_dict()
@@ -52,17 +58,20 @@ class Method:
     def name(self):
         return self.__class__.__name__
 
+
 def make_read_lambda(property_name):
     return lambda self: self_self_object.get(property_name)
+
 
 def make_write_lambda(property_name):
     return lambda self, value: self.set(property_name, value)
 
+
 def create_method_class(name, schema):
     def __init__(self, self_object):
         return Method.__init__(self, self_object)
-    
-    newclass = type(name, (Method,),{"__init__": __init__})
+
+    newclass = type(name, (Method,), {"__init__": __init__})
     newclass._labelled_arguments[name] = {}
     newclass._positional_arguments[name] = []
     if "labelledArguments" in schema:
