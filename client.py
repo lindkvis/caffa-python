@@ -62,9 +62,14 @@ class Client:
         self.log = logging.getLogger("rpc-logger")
         self.mutex = threading.Lock()
 
+        version_status = True
+        errmsg = ""
+
         for i in range(0, Client.number_of_attempts):
             try:
-                self.check_version(min_app_version, max_app_version)
+                version_status, errmsg = self.check_version(
+                    min_app_version, max_app_version
+                )
                 break
             except Exception as e:
                 if i == Client.number_of_attempts - 1:
@@ -77,6 +82,8 @@ class Client:
                         Client.delay_between_attempts,
                     )
                     time.sleep(Client.delay_between_attempts)
+        if not version_status:
+            raise RuntimeError(errmsg)
 
         self.session_uuid = self.create_session(session_type)
 
@@ -229,36 +236,49 @@ class Client:
             + "."
             + str(app_info.patch_version)
         )
-
+        self.log.info(
+            "Requiring minimum %d.%d.%d",
+            min_app_version[0],
+            min_app_version[1],
+            min_app_version[2],
+        )
+        self.log.info(
+            "Requiring maximum %d.%d.%d",
+            max_app_version[0],
+            max_app_version[1],
+            max_app_version[2],
+        )
         if (
             app_info.major_version,
             app_info.minor_version,
             app_info.patch_version,
         ) < min_app_version:
-            raise RuntimeError(
-                "App Version {}.{}.{} is too old. The minimum required is {}.{}.{}".format(
+            return (
+                False,
+                "App Version v{}.{}.{} is too old. This client only supports version v{}.{}.{} and newer".format(
                     app_info.major_version,
                     app_info.minor_version,
                     app_info.patch_version,
                     min_app_version[0],
                     min_app_version[1],
                     min_app_version[2],
-                )
+                ),
             )
         if (
             app_info.major_version,
             app_info.minor_version,
             app_info.patch_version,
         ) > max_app_version:
-            raise RuntimeError(
-                "App Version {}.{}.{} is too new. The maximum required is {}.{}.{}".format(
+            return (
+                False,
+                "App Version v{}.{}.{} is too new. This client only supports up to and including v{}.{}.{}".format(
                     app_info.major_version,
                     app_info.minor_version,
                     app_info.patch_version,
                     max_app_version[0],
                     max_app_version[1],
                     max_app_version[2],
-                )
+                ),
             )
 
-        return True
+        return True, ""
