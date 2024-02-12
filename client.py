@@ -43,6 +43,7 @@ class SessionType(IntEnum):
 
 class Client:
     number_of_attempts = 1
+    delay_between_attempts = 0.5
 
     def __init__(
         self,
@@ -70,11 +71,12 @@ class Client:
                     raise e from None
                 else:
                     self.log.warning(
-                        "Connection attempt %d/%d failed. Trying again in 0.5s",
+                        "Connection attempt %d/%d failed. Trying again in %f s",
                         i,
                         Client.number_of_attempts,
+                        Client.delay_between_attempts,
                     )
-                    time.sleep(1)
+                    time.sleep(Client.delay_between_attempts)
 
         self.session_uuid = self.create_session(session_type)
 
