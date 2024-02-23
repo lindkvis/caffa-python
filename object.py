@@ -26,6 +26,17 @@ class Object(object):
     _log = logging.getLogger("caffa-object")
 
     _methods = []
+    __frozen = False
+
+    @classmethod
+    def prep_attributes(cls):
+        setattr(cls, "_fields", None)
+        setattr(cls, "_client", None)
+        setattr(cls, "_local", None)
+        setattr(cls, "_method_list", None)
+        for method in cls._methods:
+            setattr(cls, method.static_name(), None)
+        cls.__frozen = True
 
     def __init__(self, json_object="", client=None, local=False):
         if isinstance(json_object, dict):
@@ -52,6 +63,11 @@ class Object(object):
     @property
     def keyword(self):
         return self._fields["keyword"]
+
+    def __setattr__(self, key, value):
+        if not hasattr(self, key) and self.__class__.__frozen:
+            raise TypeError("%r does not have the property %s", self, key)
+        object.__setattr__(self, key, value)
 
     def client(self):
         return self._client
@@ -149,4 +165,5 @@ def create_class(name, schema):
                         create_method_class(method_name, method_schema)
                     )
 
+    newclass.prep_attributes()
     return newclass

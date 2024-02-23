@@ -41,6 +41,12 @@ class TestObjects(object):
         assert doc.fileName == "TestValue"
         doc.fileName = "dummyFileName"
 
+        try:
+            doc.nonExistantField = "Test"
+            pytest.fail("Should get an exception!")
+        except Exception as e:
+            print("Got the expected exception for field not found")
+
     def test_children(self):
         return
 
