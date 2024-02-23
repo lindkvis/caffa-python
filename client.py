@@ -236,13 +236,13 @@ class Client:
             + "."
             + str(app_info.patch_version)
         )
-        self.log.info(
+        self.log.debug(
             "Requiring minimum %d.%d.%d",
             min_app_version[0],
             min_app_version[1],
             min_app_version[2],
         )
-        self.log.info(
+        self.log.debug(
             "Requiring maximum %d.%d.%d",
             max_app_version[0],
             max_app_version[1],
