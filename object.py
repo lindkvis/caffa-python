@@ -130,14 +130,23 @@ class Object(object):
     def dump(self):
         return json.dumps(self.to_json())
 
+    def raise_write_exception(self, property_name):
+        raise AttributeError("Property " + property_name + " is read only!")
+
 
 def make_read_lambda(property_name):
     return lambda self: self.get(property_name)
 
+# Dummy read lambda used to avoid a proper caffa read call when asking
+# for a write-only attribute
+def make_dummy_read_lambda(property_name):
+    return lambda self: None
 
 def make_write_lambda(property_name):
     return lambda self, value: self.set(property_name, value)
 
+def make_error_write_lambda(property_name):
+    return lambda self, value: self.raise_write_exception(property_name)
 
 def create_class(name, schema):
     def __init__(self, json_object="", client=None, local=False):
@@ -148,12 +157,24 @@ def create_class(name, schema):
     if "properties" in schema:
         for property_name in schema["properties"]:
             if property_name != "keyword" and property_name != "methods":
+                prop = schema["properties"][property_name]
+                read_only = "readOnly" in prop and prop["readOnly"]
+                write_only = "writeOnly" in prop and prop["writeOnly"]
+
+                read_lambda = make_dummy_read_lambda(property_name)
+                write_lambda = make_error_write_lambda(property_name)
+
+                if not write_only:
+                    read_lambda = make_read_lambda(property_name)
+                if not read_only:
+                    write_lambda = make_write_lambda(property_name)
+                    
                 setattr(
                     newclass,
                     property_name,
                     property(
-                        fget=make_read_lambda(property_name),
-                        fset=make_write_lambda(property_name),
+                        fget=read_lambda,
+                        fset=write_lambda,
                     ),
                 )
             elif property_name == "methods":
