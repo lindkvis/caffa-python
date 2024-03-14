@@ -144,28 +144,58 @@ class Client:
         except Exception as e:
             raise RuntimeError("Failed PUT request with error %s" % e) from None
 
+    def _perform_post_request(self, path, params="", body=""):
+        url = self._build_url(path, params)
+        try:
+            response = requests.post(url, json=body, auth=self.basic_auth)
+            response.raise_for_status()
+            return response.text
+        except requests.exceptions.HTTPError as e:
+            self.log.error("Failed POST request with error " + e.response.text)
+            raise e
+        except requests.exceptions.RequestException as e:
+            self.log.error("Failed POST request with error ", e)
+            raise e
+
     def _json_text_to_object(self, text):
         return json.loads(text, object_hook=lambda d: SimpleNamespace(**d))
 
     def schema_list(self):
-        all_schemas = json.loads(self._perform_get_request("/schemas"))
-        return all_schemas
+        return self.schema("/components/object_schemas")
 
-    def schema(self, keyword):
-        schema = json.loads(self._perform_get_request("/schemas/" + keyword))
+    def schema(self, location):
+        schema = json.loads(
+            self._perform_get_request("/openapi" + location.removeprefix("#"))
+        )
         return schema
+
+    def schema_from_keyword(self, keyword):
+        return self.schema("/components/object_schemas/" + keyword)
+
+    def schema_properties(self, full_schema_location):
+        properties = {}
+        full_schema = self.schema(full_schema_location)
+        if "allOf" in full_schema:
+            for sub_schema in full_schema["allOf"]:
+                print("Sub-schema: " + str(sub_schema))
+                if "properties" in sub_schema:
+                    properties = properties | sub_schema["properties"]
+                elif "$ref" in sub_schema:
+                    print(sub_schema["$ref"])
+                    properties = properties | self.schema_properties(sub_schema["$ref"])
+        return properties
 
     def execute(self, object_uuid, method_name, arguments):
         value = json.loads(
-            self._perform_put_request(
-                path="/uuid/" + object_uuid + "/" + method_name, body=arguments
+            self._perform_post_request(
+                path="/objects/" + object_uuid + "/methods/" + method_name,
+                body=arguments,
             )
         )
         if isinstance(value, dict):
-            if "keyword" in value:
-                keyword = value["keyword"]
-                schema = self.schema(keyword)
-                cls = object.create_class(keyword, schema)
+            if "$id" in value:
+                schema_properties = self.schema_properties(value["$id"])
+                cls = object.create_class(keyword, schema_properties)
                 return cls(value, self, True)
         return value
 
@@ -174,25 +204,21 @@ class Client:
 
     def create_session(self, session_type):
         response = self._json_text_to_object(
-            self._perform_put_request(
-                path="/session/create?type=" + str(int(session_type))
-            )
+            self._perform_post_request(path="/sessions/?type=" + session_type.name)
         )
-        return response.session_uuid
+        return response.uuid
 
     def cleanup(self):
         try:
             self.mutex.acquire()
             self.keep_alive = False
             if self.session_uuid:
-                self._perform_delete_request(
-                    "/session/destroy?session_uuid=" + self.session_uuid, ""
-                )
+                self._perform_delete_request("/sessions/" + self.session_uuid, "")
         finally:
             self.mutex.release()
 
     def send_keepalive(self):
-        self._perform_put_request(path="/session/keepalive")
+        self._perform_put_request(path="/sessions/" + self.session_uuid)
 
     def send_keepalives(self):
         while True:
@@ -208,20 +234,27 @@ class Client:
 
     def document(self, document_id):
         assert len(document_id) > 0
-        json_text = self._perform_get_request("/" + document_id, "skeleton=true")
+        json_text = self._perform_get_request(
+            "/documents/" + document_id, "skeleton=true"
+        )
         json_object = json.loads(json_text)
         keyword = json_object["keyword"]
-        schema = self.schema(keyword)
-        cls = object.create_class(keyword, schema)
+        schema_location = json_object["$id"]
+        print("Schema location: " + schema_location)
+        schema_properties = self.schema_properties(schema_location)
+        print(schema_properties)
+        cls = object.create_class(keyword, schema_properties)
 
         return cls(json_text, self, False)
 
     def get_field_value(self, object_uuid, field_name):
-        return self._perform_get_request("/uuid/" + object_uuid + "/" + field_name)
+        return self._perform_get_request(
+            "/objects/" + object_uuid + "/fields/" + field_name
+        )
 
     def set_field_value(self, object_uuid, field_name, json_value):
         return self._perform_put_request(
-            path="/uuid/" + object_uuid + "/" + field_name, body=json_value
+            path="/objects/" + object_uuid + "/fields/" + field_name, body=json_value
         )
 
     def check_version(self, min_app_version, max_app_version):

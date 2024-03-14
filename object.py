@@ -100,9 +100,10 @@ class Object(object):
             value = self._fields[field_keyword]
 
         if isinstance(value, dict):
+            ref = value["$id"]
             keyword = value["keyword"]
-            schema = self._client.schema(keyword)
-            cls = create_class(keyword, schema)
+            schema_properties = self._client.schema_properties(ref)
+            cls = create_class(keyword, schema_properties)
             value = cls(value, self._client)
         return value
 
@@ -137,54 +138,54 @@ class Object(object):
 def make_read_lambda(property_name):
     return lambda self: self.get(property_name)
 
+
 # Dummy read lambda used to avoid a proper caffa read call when asking
 # for a write-only attribute
 def make_dummy_read_lambda(property_name):
     return lambda self: None
 
+
 def make_write_lambda(property_name):
     return lambda self, value: self.set(property_name, value)
+
 
 def make_error_write_lambda(property_name):
     return lambda self, value: self.raise_write_exception(property_name)
 
-def create_class(name, schema):
+
+def create_class(name, schema_properties):
     def __init__(self, json_object="", client=None, local=False):
         Object.__init__(self, json_object, client, local)
 
     newclass = type(name, (Object,), {"__init__": __init__})
 
-    if "properties" in schema:
-        for property_name in schema["properties"]:
-            if property_name != "keyword" and property_name != "methods":
-                prop = schema["properties"][property_name]
-                read_only = "readOnly" in prop and prop["readOnly"]
-                write_only = "writeOnly" in prop and prop["writeOnly"]
+    for property_name, prop in schema_properties.items():
+        if property_name != "keyword" and property_name != "methods":
+            read_only = "readOnly" in prop and prop["readOnly"]
+            write_only = "writeOnly" in prop and prop["writeOnly"]
 
-                read_lambda = make_dummy_read_lambda(property_name)
-                write_lambda = make_error_write_lambda(property_name)
+            read_lambda = make_dummy_read_lambda(property_name)
+            write_lambda = make_error_write_lambda(property_name)
 
-                if not write_only:
-                    read_lambda = make_read_lambda(property_name)
-                if not read_only:
-                    write_lambda = make_write_lambda(property_name)
-                    
-                setattr(
-                    newclass,
-                    property_name,
-                    property(
-                        fget=read_lambda,
-                        fset=write_lambda,
-                    ),
+            if not write_only:
+                read_lambda = make_read_lambda(property_name)
+            if not read_only:
+                write_lambda = make_write_lambda(property_name)
+
+            setattr(
+                newclass,
+                property_name,
+                property(
+                    fget=read_lambda,
+                    fset=write_lambda,
+                ),
+            )
+        elif property_name == "methods":
+            for method_name, method_schema in prop["properties"].items():
+                print("METHOD SCHEMA: " + str(method_schema))
+                method_schema = method_schema["properties"]
+                newclass._methods.append(
+                    create_method_class(method_name, method_schema)
                 )
-            elif property_name == "methods":
-                for method_name, method_schema in schema["properties"]["methods"][
-                    "properties"
-                ].items():
-                    method_schema = method_schema["properties"]
-                    newclass._methods.append(
-                        create_method_class(method_name, method_schema)
-                    )
-
     newclass.prep_attributes()
     return newclass
