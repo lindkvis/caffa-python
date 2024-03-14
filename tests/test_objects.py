@@ -21,7 +21,9 @@ class TestObjects(object):
         assert doc is not None
         print(str(doc))
         print("Found document: " + doc.keyword)
-        print("With schema: " + json.dumps(self.testApp.schema(doc.keyword)))
+        print(
+            "With schema: " + json.dumps(self.testApp.schema_from_keyword(doc.keyword))
+        )
 
     def test_fields(self):
         doc = self.testApp.document("testDocument")
@@ -29,8 +31,6 @@ class TestObjects(object):
         assert doc is not None
         keywords = dir(doc)
         assert len(keywords) > 0
-        for keyword in keywords:
-            print("Found field: " + keyword)
 
         print("Found filename: " + doc.fileName)
         assert doc.fileName == "dummyFileName"
