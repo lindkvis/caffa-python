@@ -160,17 +160,20 @@ class Client:
     def _json_text_to_object(self, text):
         return json.loads(text, object_hook=lambda d: SimpleNamespace(**d))
 
+    def schema_root(self):
+        return "/openapi.json"
+
     def schema_list(self):
-        return self.schema("/components/object_schemas")
+        return self.schema(self.schema_root() + "/components/object_schemas")
 
     def schema(self, location):
-        schema = json.loads(
-            self._perform_get_request("/openapi.json" + location.removeprefix("#"))
-        )
+        if location.startswith("#"):
+            location = self.schema_root() + location[1:]
+        schema = json.loads(self._perform_get_request(location))
         return schema
 
     def schema_from_keyword(self, keyword):
-        return self.schema("/components/object_schemas/" + keyword)
+        return self.schema(self.schema_root() + "/components/object_schemas/" + keyword)
 
     def schema_properties(self, full_schema_location):
         properties = {}
