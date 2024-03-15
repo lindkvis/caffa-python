@@ -100,9 +100,14 @@ class Object(object):
             value = self._fields[field_keyword]
 
         if isinstance(value, dict):
-            ref = value["$id"]
             keyword = value["keyword"]
-            schema_properties = self._client.schema_properties(ref)
+            schema_location = ""
+            if "$id" in value:
+                schema_location = value["$id"]
+            else:
+                schema_location = self._client.schema_location_from_keyword(keyword)
+
+            schema_properties = self._client.schema_properties(schema_location)
             cls = create_class(keyword, schema_properties)
             value = cls(value, self._client)
         return value

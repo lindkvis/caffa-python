@@ -21,9 +21,8 @@ class TestObjects(object):
         assert doc is not None
         print(str(doc))
         print("Found document: " + doc.keyword)
-        print(
-            "With schema: " + json.dumps(self.testApp.schema_from_keyword(doc.keyword))
-        )
+        schema_location = self.testApp.schema_location_from_keyword(doc.keyword)
+        print("With schema: " + json.dumps(self.testApp.schema(schema_location)))
 
     def test_fields(self):
         doc = self.testApp.document("testDocument")

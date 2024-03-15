@@ -172,19 +172,17 @@ class Client:
         schema = json.loads(self._perform_get_request(location))
         return schema
 
-    def schema_from_keyword(self, keyword):
-        return self.schema(self.schema_root() + "/components/object_schemas/" + keyword)
+    def schema_location_from_keyword(self, keyword):
+        return self.schema_root() + "/components/object_schemas/" + keyword
 
     def schema_properties(self, full_schema_location):
         properties = {}
         full_schema = self.schema(full_schema_location)
         if "allOf" in full_schema:
             for sub_schema in full_schema["allOf"]:
-                print("Sub-schema: " + str(sub_schema))
                 if "properties" in sub_schema:
                     properties = properties | sub_schema["properties"]
                 elif "$ref" in sub_schema:
-                    print(sub_schema["$ref"])
                     properties = properties | self.schema_properties(sub_schema["$ref"])
         return properties
 
@@ -195,11 +193,19 @@ class Client:
                 body=arguments,
             )
         )
-        if isinstance(value, dict):
-            if "$id" in value:
-                schema_properties = self.schema_properties(value["$id"])
+
+        if isinstance(value, dict) and value:
+            if "keyword" in value:
+                schema_location = ""
+                keyword = value["keyword"]
+                if "$id" in value:
+                    schema_location = value["$id"]
+                else:
+                    schema_location = schema_location_from_keyword(keyword)
+                schema_properties = self.schema_properties(schema_location)
                 cls = object.create_class(keyword, schema_properties)
                 return cls(value, self, True)
+
         return value
 
     def app_info(self):
@@ -242,10 +248,14 @@ class Client:
         )
         json_object = json.loads(json_text)
         keyword = json_object["keyword"]
-        schema_location = json_object["$id"]
-        print("Schema location: " + schema_location)
+
+        schema_location = ""
+        if "$id" in json_object:
+            schema_location = json_object["$id"]
+        else:
+            schema_location = self.schema_location_from_keyword(keyword)
+
         schema_properties = self.schema_properties(schema_location)
-        print(schema_properties)
         cls = object.create_class(keyword, schema_properties)
 
         return cls(json_text, self, False)
