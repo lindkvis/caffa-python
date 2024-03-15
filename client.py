@@ -165,7 +165,7 @@ class Client:
 
     def schema(self, location):
         schema = json.loads(
-            self._perform_get_request("/openapi" + location.removeprefix("#"))
+            self._perform_get_request("/openapi.json" + location.removeprefix("#"))
         )
         return schema
 
