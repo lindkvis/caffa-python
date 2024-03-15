@@ -187,7 +187,6 @@ def create_class(name, schema_properties):
             )
         elif property_name == "methods":
             for method_name, method_schema in prop["properties"].items():
-                print("METHOD SCHEMA: " + str(method_schema))
                 method_schema = method_schema["properties"]
                 newclass._methods.append(
                     create_method_class(method_name, method_schema)

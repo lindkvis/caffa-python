@@ -201,7 +201,7 @@ class Client:
                 if "$id" in value:
                     schema_location = value["$id"]
                 else:
-                    schema_location = schema_location_from_keyword(keyword)
+                    schema_location = self.schema_location_from_keyword(keyword)
                 schema_properties = self.schema_properties(schema_location)
                 cls = object.create_class(keyword, schema_properties)
                 return cls(value, self, True)
