@@ -92,7 +92,7 @@ class Object(object):
 
     def get(self, field_keyword):
         value = None
-        if not self._local:
+        if not self._local and field_keyword != "keyword" and field_keyword != "uuid":
             value = json.loads(
                 self._client.get_field_value(self._fields["uuid"], field_keyword)
             )
@@ -109,7 +109,7 @@ class Object(object):
 
             schema_properties = self._client.schema_properties(schema_location)
             cls = create_class(keyword, schema_properties)
-            value = cls(value, self._client)
+            value = cls(value, self._client, self._local)
         return value
 
     def set(self, field_keyword, value):
