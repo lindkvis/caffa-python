@@ -31,8 +31,8 @@ from types import SimpleNamespace
 # By default we try to match the caffa-version
 # However the application using caffa should set its own version which can be checked
 # against by providing the script-version parameter
-MIN_APP_VERSION = (1, 3, 0)
-MAX_APP_VERSION = (1, 3, 99)
+MIN_APP_VERSION = (1, 4, 0)
+MAX_APP_VERSION = (1, 4, 99)
 
 
 class SessionType(IntEnum):
