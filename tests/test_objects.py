@@ -31,14 +31,15 @@ class TestObjects(object):
         keywords = dir(doc)
         assert len(keywords) > 0
 
-        print("Found filename: " + doc.fileName)
-        assert doc.fileName == "dummyFileName"
+        print("Found id: " + doc.id)
+        assert doc.id == "testDocument"
         try:
-            doc.fileName = "TestValue"
+            doc.id = "AnotherName"
+            pytest.fail("Should have failed to write to document id, but succeeded!")
         except Exception as e:
-            pytest.fail("Failed with exception {0}", e)
-        assert doc.fileName == "TestValue"
-        doc.fileName = "dummyFileName"
+            print("Got expected error")
+
+        assert doc.id == "testDocument"
 
         try:
             doc.nonExistantField = "Test"
