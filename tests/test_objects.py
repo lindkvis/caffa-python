@@ -9,12 +9,12 @@ log = logging.getLogger("test_objects")
 
 class TestObjects(object):
     def setup_method(self, method):
-        self.testApp = caffa.Client(
-            "localhost", 50000, username="test", password="password"
+        self.testApp = caffa.RestClient(
+            "localhost", 8080, username="test", password="password"
         )
 
     def teardown_method(self, method):
-        self.testApp.cleanup()
+        self.testApp.quit()
 
     def test_document(self):
         doc = self.testApp.document("testDocument")

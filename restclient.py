@@ -41,14 +41,14 @@ class SessionType(IntEnum):
     OBSERVING = 2
 
 
-class Client:
+class RestClient:
     number_of_attempts = 1
     delay_between_attempts = 0.5
 
     def __init__(
         self,
         hostname,
-        port=50000,
+        port=8080,
         username="",
         password="",
         min_app_version=MIN_APP_VERSION,
@@ -65,23 +65,23 @@ class Client:
         version_status = True
         errmsg = ""
 
-        for i in range(0, Client.number_of_attempts):
+        for i in range(0, RestClient.number_of_attempts):
             try:
                 version_status, errmsg = self.check_version(
                     min_app_version, max_app_version
                 )
                 break
             except Exception as e:
-                if i == Client.number_of_attempts - 1:
+                if i == RestClient.number_of_attempts - 1:
                     raise e from None
                 else:
                     self.log.warning(
                         "Connection attempt %d/%d failed. Trying again in %f s",
                         i,
-                        Client.number_of_attempts,
-                        Client.delay_between_attempts,
+                        RestClient.number_of_attempts,
+                        RestClient.delay_between_attempts,
                     )
-                    time.sleep(Client.delay_between_attempts)
+                    time.sleep(RestClient.delay_between_attempts)
         if not version_status:
             raise RuntimeError(errmsg)
 

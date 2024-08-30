@@ -8,8 +8,8 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="caffa-lindkvis",
-    version="1.3.0",
+    name="caffa-python",
+    version="1.5.0",
     author="Gaute Lindkvist",
     author_email="lindkvis@gmail.com",
     description="Python bindings for caffa",
