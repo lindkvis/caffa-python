@@ -94,6 +94,16 @@ class Client:
         self.keepalive_thread = threading.Thread(target=self.send_keepalives)
         self.keepalive_thread.start()
 
+    def quit(self):
+        try:
+            self.mutex.acquire()
+            self.keep_alive = False
+            if self.session_uuid:
+                self._perform_delete_request("/sessions/" + self.session_uuid, "")
+        finally:
+            self.mutex.release()
+        self.keepalive_thread.join()
+
     def _build_url(self, path, params=""):
         url = "http://" + self.hostname + ":" + str(self.port) + path
         if hasattr(self, "session_uuid"):
@@ -216,15 +226,6 @@ class Client:
             self._perform_post_request(path="/sessions/?type=" + session_type.name)
         )
         return response.uuid
-
-    def cleanup(self):
-        try:
-            self.mutex.acquire()
-            self.keep_alive = False
-            if self.session_uuid:
-                self._perform_delete_request("/sessions/" + self.session_uuid, "")
-        finally:
-            self.mutex.release()
 
     def send_keepalive(self):
         self._perform_put_request(path="/sessions/" + self.session_uuid)
