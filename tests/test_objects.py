@@ -1,16 +1,16 @@
-import logging
-import sys
-import pytest
 import caffa
 import json
+import logging
+import pytest
 
 log = logging.getLogger("test_objects")
+hostname = "127.0.0.1"
 
 
 class TestObjects(object):
     def setup_method(self, method):
         self.testApp = caffa.RestClient(
-            "localhost", 8080, username="test", password="password"
+            hostname, 8080, username="test", password="password"
         )
 
     def teardown_method(self, method):
