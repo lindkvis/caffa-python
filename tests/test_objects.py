@@ -10,7 +10,7 @@ hostname = "127.0.0.1"
 class TestObjects(object):
     def setup_method(self, method):
         self.testApp = caffa.RestClient(
-            hostname, 8080, username="test", password="password"
+            hostname, 50000, username="test", password="password"
         )
 
     def teardown_method(self, method):

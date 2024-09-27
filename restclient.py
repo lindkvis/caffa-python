@@ -20,12 +20,12 @@
 import json
 import logging
 import requests
-import time
 import threading
-
+import time
 from enum import IntEnum
-from . import object
 from types import SimpleNamespace
+
+from . import object
 
 # Update the (x, y, z) tuple to match minimum required version (0, 6, 4) means minimum 0.6.4
 # By default we try to match the caffa-version
@@ -46,14 +46,14 @@ class RestClient:
     delay_between_attempts = 0.5
 
     def __init__(
-        self,
-        hostname,
-        port=8080,
-        username="",
-        password="",
-        min_app_version=MIN_APP_VERSION,
-        max_app_version=MAX_APP_VERSION,
-        session_type=SessionType.REGULAR,
+            self,
+            hostname,
+            port=50000,
+            username="",
+            password="",
+            min_app_version=MIN_APP_VERSION,
+            max_app_version=MAX_APP_VERSION,
+            session_type=SessionType.REGULAR,
     ):
         self.hostname = hostname
         self.port = port
@@ -296,9 +296,9 @@ class RestClient:
             max_app_version[2],
         )
         if (
-            app_info.major_version,
-            app_info.minor_version,
-            app_info.patch_version,
+                app_info.major_version,
+                app_info.minor_version,
+                app_info.patch_version,
         ) < min_app_version:
             return (
                 False,
@@ -312,9 +312,9 @@ class RestClient:
                 ),
             )
         if (
-            app_info.major_version,
-            app_info.minor_version,
-            app_info.patch_version,
+                app_info.major_version,
+                app_info.minor_version,
+                app_info.patch_version,
         ) > max_app_version:
             return (
                 False,
