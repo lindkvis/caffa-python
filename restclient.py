@@ -32,7 +32,7 @@ from . import object
 # However the application using caffa should set its own version which can be checked
 # against by providing the script-version parameter
 MIN_APP_VERSION = (1, 5, 0)
-MAX_APP_VERSION = (1, 5, 99)
+MAX_APP_VERSION = (1, 6, 99)
 
 
 class SessionType(IntEnum):
