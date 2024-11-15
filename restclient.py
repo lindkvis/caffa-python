@@ -128,6 +128,19 @@ class RestClient:
         except requests.exceptions.RequestException as e:
             raise RuntimeError("Failed GET request with error %s" % e) from None
 
+    def _perform_options_request(self, path, params=""):
+        url = self._build_url(path, params)
+        try:
+            response = requests.options(url, auth=self.basic_auth)
+            response.raise_for_status()
+            return response.text
+        except requests.exceptions.HTTPError as e:
+            raise RuntimeError(
+                "Failed OPTIONS request with error %s" % e.response.text
+            ) from None
+        except requests.exceptions.RequestException as e:
+            raise RuntimeError("Failed OPTIONS request with error %s" % e) from None
+
     def _perform_delete_request(self, path, params):
         url = self._build_url(path, params)
         try:
@@ -226,6 +239,12 @@ class RestClient:
             self._perform_post_request(path="/sessions/?type=" + session_type.name)
         )
         return response.uuid
+
+    def session_metadata(self):
+        response = self._json_text_to_object(
+            self._perform_options_request(path="/sessions/" + self.session_uuid)
+        )
+        return response
 
     def send_keepalive(self):
         self._perform_put_request(path="/sessions/" + self.session_uuid)
