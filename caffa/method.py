@@ -16,7 +16,6 @@
 #   See the GNU Lesser General Public License at <<http:#www.gnu.org/licenses/lgpl-2.1.html>>
 #   for more details.
 #
-import json
 import logging
 
 
@@ -60,7 +59,7 @@ class Method:
 
 
 def make_read_lambda(property_name):
-    return lambda self: self_self_object.get(property_name)
+    return lambda self: self._self_object.get(property_name)
 
 
 def make_write_lambda(property_name):

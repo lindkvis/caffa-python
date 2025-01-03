@@ -36,7 +36,7 @@ class TestObjects(object):
         try:
             doc.id = "AnotherName"
             pytest.fail("Should have failed to write to document id, but succeeded!")
-        except Exception as e:
+        except Exception:
             print("Got expected error")
 
         assert doc.id == "testDocument"
@@ -44,7 +44,7 @@ class TestObjects(object):
         try:
             doc.nonExistantField = "Test"
             pytest.fail("Should get an exception!")
-        except Exception as e:
+        except Exception:
             print("Got the expected exception for field not found")
 
     def test_children(self):
@@ -96,7 +96,7 @@ class TestObjects(object):
         doc = self.testApp.document("testDocument")
         assert doc is not None
         try:
-            value = doc.does_not_exist
+            doc.does_not_exist
             pytest.fail("Should have had exception, but got none!")
         except Exception as e:
             log.info(
@@ -134,7 +134,7 @@ class TestObjects(object):
 
         except Exception as e:
             log.info(
-                "Got expected exception when trying to assign an invalid enum value: '0'".format(
+                "Got expected exception when trying to assign an invalid enum value: '{0}'".format(
                     e
                 )
             )

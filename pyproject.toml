@@ -1,3 +1,30 @@
 [build-system]
-requires = ["setuptool>=42"]
+requires = ["setuptools>=62"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "caffa"
+version = "1.6.0"
+description = "Python bindings for caffa"
+readme = "README.md"
+requires-python = ">=3.6"
+license = { file = "LICENSE" }
+authors = [{ name = "Gaute Lindkvist", email = "lindkvis@gmail.com" }]
+maintainers = [
+  { name = "Gaute Lindkvist", email = "lindkvis@gmail.com" },
+]
+classifiers = [
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: LGPL License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+]
+dependencies = ["requests"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.urls]
+"Homepage" = "https://github.com/lindkvis/caffa-python"
+"Bug Reports" = "https://github.com/lindkvis/caffa-python/issues"
+"Source" = "https://github.com/lindkvis/caffa-python"
