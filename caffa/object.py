@@ -19,7 +19,7 @@
 import json
 import logging
 
-from .method import Method, create_method_class
+from .method import create_method_class
 
 
 class Object(object):

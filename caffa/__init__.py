@@ -1,16 +1,7 @@
-import platform
-import subprocess
-import sys
-import setuptools
-import pathlib
-import os
-
-name = "caffa"
-
-current_dir = os.path.abspath(os.curdir)
-caffa_dir = os.path.dirname(__file__)
-os.chdir(current_dir)
-
-from .restclient import RestClient, SessionType
-from .object import Object, create_class, create_method_class
-from .method import Method
+from .restclient import RestClient as RestClient, SessionType as SessionType
+from .object import (
+    Object as Object,
+    create_class as create_class,
+    create_method_class as create_method_class,
+)
+from .method import Method as Method
