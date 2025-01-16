@@ -114,11 +114,14 @@ class Object(object):
 
     def set(self, field_keyword, value):
         if isinstance(value, Object):
-            value = object.to_json()
+            value = value.to_json()
         if not self._local:
             self._client.set_field_value(self.uuid, field_keyword, value)
         else:
-            self._fields[field_keyword]["value"] = value
+            if hasattr(self._fields[field_keyword], "value"):
+                self._fields[field_keyword]["value"] = value
+            else:
+                self._fields[field_keyword] = value
 
     def create_field(self, keyword, type, value):
         self._fields[keyword] = {"type": type, "value": value}
