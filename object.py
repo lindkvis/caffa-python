@@ -82,7 +82,7 @@ class Object(object):
         return content
 
     def to_json(self):
-        return json.dumps(self.to_dict())
+        return json.loads(self.to_string())
 
     def field_keywords(self):
         keywords = []
@@ -133,8 +133,8 @@ class Object(object):
     def methods(self):
         return self._method_list
 
-    def dump(self):
-        return json.dumps(self.to_json())
+    def to_string(self):
+        return json.dumps(self.to_dict())
 
     def raise_write_exception(self, property_name):
         raise AttributeError("Property " + property_name + " is read only!")
