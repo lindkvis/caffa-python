@@ -56,10 +56,6 @@ class Object(object):
             setattr(self, method.static_name(), method_instance)
             self._method_list.append(method_instance)
 
-    @classmethod
-    def create(cls, **kwargs):
-        return cls(json_object=kwargs, client=None, local=True)
-
     @property
     def keyword(self):
         return self._fields["keyword"]

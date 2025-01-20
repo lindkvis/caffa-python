@@ -183,6 +183,18 @@ class RestClient:
     def _json_text_to_object(self, text):
         return json.loads(text, object_hook=lambda d: SimpleNamespace(**d))
 
+    def create_local_object(self, keyword, json_object):
+        schema_location = ""
+        if "$id" in json_object:
+            schema_location = json_object["$id"]
+        else:
+            schema_location = self.schema_location_from_keyword(keyword)
+
+        schema_properties = self.schema_properties(schema_location)
+        cls = object.create_class(keyword, schema_properties)
+        local_object = cls(json_object, self, True)
+        return local_object
+
     def schema_root(self):
         return "/openapi.json"
 
